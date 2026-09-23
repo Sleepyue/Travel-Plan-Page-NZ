@@ -1,0 +1,2823 @@
+{
+  "$schema": "./schemas/trip-data.schema.json",
+  "schemaVersion": "2.0-lite",
+  "config": {
+    "schemaVersion": "1.0.0",
+    "modules": {
+      "flights": true,
+      "overview": true,
+      "itinerary": true,
+      "todo": true,
+      "driving": true,
+      "ledger": true
+    },
+    "language": "zh-CN",
+    "persistence": {
+      "mode": "d1",
+      "apiBase": "/api/trip",
+      "sharedCollections": ["todos", "tickets", "ledger", "dining"]
+    }
+  },
+  "metadata": {
+    "tripId": "nz-2026-autumn",
+    "title": "新西兰南岛 11 日自驾（2026）",
+    "language": "zh-CN",
+    "assets": {
+      "routeMaps": [
+        "assets/maps/templates/template-06-upland-basin.webp"
+      ]
+    }
+  },
+  "trip": {
+    "status": "draft",
+    "startDate": "2026-09-25",
+    "endDate": "2026-10-05",
+    "dayCount": 11,
+    "nightCountAway": 10,
+    "countries": [
+      {
+        "code": "CN",
+        "nameZh": "中国",
+        "name": "China"
+      },
+      {
+        "code": "NZ",
+        "nameZh": "新西兰",
+        "name": "New Zealand"
+      }
+    ],
+    "primaryDestinationCountries": [
+      "NZ"
+    ],
+    "primaryDestinationName": "新西兰",
+    "citiesAndAreas": [
+      "奥克兰",
+      "基督城",
+      "特卡波",
+      "瓦纳卡",
+      "皇后镇",
+      "但尼丁",
+      "奥马鲁"
+    ],
+    "routeSummary": "香港 ⇄ 奥克兰，南岛环线：基督城→特卡波→库克山→瓦纳卡→皇后镇→但尼丁→奥马鲁→基督城",
+    "groupSize": 2
+  },
+  "flightJourneys": [
+    {
+      "id": "j-hkg-akl",
+      "status": "confirmed",
+      "title": "去程 香港 → 奥克兰",
+      "flights": [
+        "f1"
+      ]
+    },
+    {
+      "id": "j-akl-chc",
+      "status": "confirmed",
+      "title": "奥克兰 → 基督城",
+      "flights": [
+        "f2"
+      ]
+    },
+    {
+      "id": "j-chc-akl",
+      "status": "confirmed",
+      "title": "基督城 → 奥克兰",
+      "flights": [
+        "f3"
+      ]
+    },
+    {
+      "id": "j-akl-hkg",
+      "status": "confirmed",
+      "title": "返程 奥克兰 → 香港",
+      "flights": [
+        "f4"
+      ]
+    }
+  ],
+  "flights": [
+    {
+      "id": "f1",
+      "journeyId": "j-hkg-akl",
+      "sequence": 1,
+      "airline": {
+        "nameZh": "新西兰航空",
+        "name": "Air New Zealand"
+      },
+      "flightNumber": "NZ080",
+      "departure": {
+        "airportCode": "HKG",
+        "city": "香港",
+        "date": "2026-09-25",
+        "time": "19:15",
+        "utcOffset": "+08:00"
+      },
+      "arrival": {
+        "airportCode": "AKL",
+        "city": "奥克兰",
+        "date": "2026-09-26",
+        "time": "09:50",
+        "utcOffset": "+12:00"
+      }
+    },
+    {
+      "id": "f2",
+      "journeyId": "j-akl-chc",
+      "sequence": 1,
+      "airline": {
+        "nameZh": "新西兰航空",
+        "name": "Air New Zealand"
+      },
+      "flightNumber": "NZ519",
+      "departure": {
+        "airportCode": "AKL",
+        "city": "奥克兰",
+        "date": "2026-09-27",
+        "time": "06:45",
+        "utcOffset": "+13:00"
+      },
+      "arrival": {
+        "airportCode": "CHC",
+        "city": "基督城",
+        "date": "2026-09-27",
+        "time": "08:10",
+        "utcOffset": "+13:00"
+      }
+    },
+    {
+      "id": "f3",
+      "journeyId": "j-chc-akl",
+      "sequence": 1,
+      "airline": {
+        "nameZh": "新西兰航空",
+        "name": "Air New Zealand"
+      },
+      "flightNumber": "NZ534",
+      "departure": {
+        "airportCode": "CHC",
+        "city": "基督城",
+        "date": "2026-10-05",
+        "time": "08:10",
+        "utcOffset": "+13:00"
+      },
+      "arrival": {
+        "airportCode": "AKL",
+        "city": "奥克兰",
+        "date": "2026-10-05",
+        "time": "09:35",
+        "utcOffset": "+13:00"
+      }
+    },
+    {
+      "id": "f4",
+      "journeyId": "j-akl-hkg",
+      "sequence": 1,
+      "airline": {
+        "nameZh": "新西兰航空",
+        "name": "Air New Zealand"
+      },
+      "flightNumber": "NZ081",
+      "departure": {
+        "airportCode": "AKL",
+        "city": "奥克兰",
+        "date": "2026-10-05",
+        "time": "11:15",
+        "utcOffset": "+13:00"
+      },
+      "arrival": {
+        "airportCode": "HKG",
+        "city": "香港",
+        "date": "2026-10-05",
+        "time": "17:45",
+        "utcOffset": "+08:00"
+      }
+    }
+  ],
+  "accommodations": [
+    {
+      "id": "acc-akl",
+      "name": "JetPark Auckland Airport Hotel",
+      "checkIn": "2026-09-26",
+      "checkOut": "2026-09-27",
+      "note": "Booking 确认号已隐藏，PIN 已隐藏，Express Room，2 成人，CNY 775"
+    },
+    {
+      "id": "acc-tek",
+      "name": "Ensuite Queen bedroom | Tekapo (Airbnb)",
+      "checkIn": "2026-09-27",
+      "checkOut": "2026-09-29",
+      "note": "确认码已隐藏，¥2,720.42，6 Erebus Place, Tekapo，房东 Discover Tekapo Accommodation"
+    },
+    {
+      "id": "acc-wan",
+      "name": "Classas Lakeside Air BnB (Airbnb)",
+      "checkIn": "2026-09-29",
+      "checkOut": "2026-10-01",
+      "note": "确认码已隐藏，¥2,618.41，37 Penrith Park Drive, Wanaka，房东 Jennifer"
+    },
+    {
+      "id": "acc-qt",
+      "name": "Spa Pool | Unreal Panoramic Views | Relaxed Getaway (Airbnb)",
+      "checkIn": "2026-10-01",
+      "checkOut": "2026-10-03",
+      "note": "确认码已隐藏，¥4,675.12，38 Wynyard Crescent, Queenstown，房东 Michael"
+    },
+    {
+      "id": "acc-oam",
+      "name": "Lear House (Airbnb)",
+      "checkIn": "2026-10-03",
+      "checkOut": "2026-10-04",
+      "note": "确认码已隐藏，¥1,033.47，2 Tamar Street, Oamaru，房东 Jay"
+    },
+    {
+      "id": "acc-chc",
+      "name": "Airport Palms Motel",
+      "checkIn": "2026-10-04",
+      "checkOut": "2026-10-05",
+      "note": "Booking 确认号已隐藏，PIN 已隐藏，CNY 962，56 Roydale Avenue, Burnside, Christchurch 8053"
+    }
+  ],
+  "groundTransport": {
+    "rentalCar": {
+      "company": "Rental Cars 247 / 租租车",
+      "confirmationNo": "已隐藏",
+      "bookingNo": "已隐藏",
+      "rentalPeriodDays": 8,
+      "vehicle": {
+        "example": "Suzuki Swift 或同组",
+        "class": "自动 5 座 混动"
+      },
+      "unlimitedKilometers": true,
+      "price": {
+        "currency": "CNY",
+        "totalPaid": 1832,
+        "payAtCounter": 0
+      },
+      "insurance": [
+        "车辆租金",
+        "税费",
+        "盗窃险(起赔 NZD3000)",
+        "碰撞险(起赔 NZD3000)",
+        "第三者责任险(起赔 NZD3000)",
+        "1 名额外驾驶人",
+        "无限里程",
+        "超级补充全险(国内承保)"
+      ],
+      "pickup": {
+        "date": "2026-09-27",
+        "time": "08:30",
+        "location": "基督城机场店 (CHC)",
+        "address": "79 Stanleys Road, Harewood, Christchurch 8051",
+        "utcOffset": "+13:00"
+      },
+      "dropoff": {
+        "date": "2026-10-05",
+        "time": "08:30",
+        "timeZoneLabel": "基督城",
+        "vehicleReturnPoint": "基督城机场店 (CHC)",
+        "deadlineWarning": "与当天 NZ534 08:10 起飞冲突，请核对实际还车时间",
+        "recommendedArrivalTime": "",
+        "utcOffset": "+13:00"
+      }
+    },
+    "rentalChecklist": [
+      "出示驾照原件+翻译件",
+      "出示租车确认单+保险单",
+      "还车前油箱加满",
+      "到店礼貌拒绝不需要的额外保险"
+    ],
+    "drivingNotes": [
+      "基督城机场店外（不在航站楼内），1/2 号门出航站楼右转乘免费接驳车，电话 +64 3 662 9026",
+      "还车建议预留 2 小时办理手续",
+      "仅可在铺装道路行驶；禁止 Skippers Canyon Road、90 Mile Beach 等未铺装/封闭道路",
+      "本次为 10 月，无需雪地胎（澳新冬季 6-9 月）"
+    ],
+    "drivingReferenceLinks": [
+      {
+        "label": "租租车中文热线 +64 (9) 801 0013 / 国内 1010-1020",
+        "url": ""
+      },
+      {
+        "label": "新西兰紧急电话 111",
+        "url": ""
+      }
+    ],
+    "plannedRoadLegs": [],
+    "publicTransitAndRail": [
+      {
+        "date": "2026-09-25",
+        "note": "G6583 深圳北 → 香港西九龙 13:12-13:31，二等座 ¥75×2（肖玥/刘睿）"
+      }
+    ]
+  },
+  "days": [
+    {
+      "day": 1,
+      "date": "2026-09-25",
+      "title": "深圳/香港出发 · 飞奥克兰",
+      "locations": [
+        "香港西九龙",
+        "香港机场"
+      ],
+      "schedule": [
+        {
+          "id": "d1-lunch",
+          "time": "11:00",
+          "type": "restaurant",
+          "text": "寿司郎天虹龙华店午餐（深圳，2 人）"
+        },
+        {
+          "id": "d1-train",
+          "time": "13:12",
+          "type": "transfer",
+          "text": "高铁 G6583 深圳北 → 香港西九龙 13:12-13:31"
+        },
+        {
+          "id": "d1-flight",
+          "time": "19:15",
+          "type": "flight",
+          "text": "NZ080 香港 → 奥克兰（次日 09:50 抵达）"
+        },
+        {
+          "time": "23:00",
+          "type": "note",
+          "text": "夜航飞往奥克兰，机上过夜"
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "date": "2026-09-26",
+      "title": "抵达奥克兰",
+      "locations": [
+        "奥克兰"
+      ],
+      "schedule": [
+        {
+          "id": "d2-arr",
+          "time": "09:50",
+          "type": "flight",
+          "text": "抵达奥克兰机场"
+        },
+        {
+          "id": "d2-dev",
+          "time": "14:00",
+          "type": "attraction",
+          "text": "Devonport 渡轮 + 漫步"
+        },
+        {
+          "id": "d2-ci",
+          "time": "15:00",
+          "type": "check-in",
+          "text": "入住 JetPark Auckland Airport Hotel",
+          "placeId": "p_akl"
+        },
+        {
+          "id": "d2-sky",
+          "time": "17:00",
+          "type": "attraction",
+          "text": "Sky Tower 天空塔"
+        },
+        {
+          "time": "21:00",
+          "type": "check-in",
+          "text": "晚上回到酒店休息 · JetPark 机场酒店"
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "date": "2026-09-27",
+      "title": "奥克兰 → 基督城 → 特卡波",
+      "locations": [
+        "奥克兰",
+        "基督城",
+        "特卡波"
+      ],
+      "schedule": [
+        {
+          "time": "06:00",
+          "type": "check-out",
+          "text": "早上从酒店退房出发 · JetPark 机场酒店"
+        },
+        {
+          "id": "d3-flight",
+          "time": "06:45",
+          "type": "flight",
+          "text": "NZ519 奥克兰 → 基督城 06:45-08:10",
+          "placeId": "p_akl"
+        },
+        {
+          "id": "d3-pick",
+          "time": "08:30",
+          "type": "drive",
+          "text": "基督城机场取车（Rental Cars 247）",
+          "placeId": "p_chc"
+        },
+        {
+          "id": "d3-drive",
+          "time": "09:00",
+          "type": "drive",
+          "text": "自驾基督城 → 特卡波（约 3 小时）",
+          "placeId": "p_tek"
+        },
+        {
+          "id": "d3-art",
+          "time": "14:00",
+          "type": "attraction",
+          "text": "The Arts Centre / Riverside Market"
+        },
+        {
+          "id": "d3-ci",
+          "time": "15:00",
+          "type": "check-in",
+          "text": "入住 Tekapo Airbnb",
+          "placeId": "p_tek"
+        },
+        {
+          "id": "d3-lake",
+          "time": "17:00",
+          "type": "attraction",
+          "text": "Lake Tekapo 特卡波湖",
+          "placeId": "p_tek"
+        },
+        {
+          "time": "21:00",
+          "type": "check-in",
+          "text": "晚上回到民宿休息 · Tekapo 民宿"
+        }
+      ]
+    },
+    {
+      "day": 4,
+      "date": "2026-09-28",
+      "title": "特卡波 → 库克山",
+      "locations": [
+        "特卡波",
+        "库克山",
+        "普卡基湖"
+      ],
+      "schedule": [
+        {
+          "time": "08:00",
+          "type": "check-out",
+          "text": "早上从民宿出发 · Tekapo 民宿"
+        },
+        {
+          "id": "d4-drive",
+          "time": "09:00",
+          "type": "drive",
+          "text": "自驾特卡波 → 库克山（约 2.5 小时）",
+          "placeId": "p_mtCook"
+        },
+        {
+          "id": "d4-mt",
+          "time": "12:00",
+          "type": "attraction",
+          "text": "Mount Cook 库克山",
+          "placeId": "p_mtCook"
+        },
+        {
+          "id": "d4-puk",
+          "time": "15:00",
+          "type": "attraction",
+          "text": "Lake Pukaki 普卡基湖",
+          "placeId": "p_pukaki"
+        },
+        {
+          "time": "20:00",
+          "type": "check-in",
+          "text": "晚上回到民宿休息 · Tekapo 民宿"
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "date": "2026-09-29",
+      "title": "特卡波 → 瓦纳卡",
+      "locations": [
+        "特卡波",
+        "瓦纳卡"
+      ],
+      "schedule": [
+        {
+          "time": "08:30",
+          "type": "check-out",
+          "text": "早上从民宿退房出发 · Tekapo 民宿"
+        },
+        {
+          "id": "d5-drive",
+          "time": "09:30",
+          "type": "drive",
+          "text": "自驾特卡波 → 瓦纳卡（约 2.5 小时）",
+          "placeId": "p_wanaka"
+        },
+        {
+          "id": "d5-lake",
+          "time": "14:00",
+          "type": "attraction",
+          "text": "Lake Wanaka 瓦纳卡湖",
+          "placeId": "p_wanaka"
+        },
+        {
+          "id": "d5-ci",
+          "time": "15:00",
+          "type": "check-in",
+          "text": "入住 Wanaka Airbnb",
+          "placeId": "p_wanaka"
+        },
+        {
+          "time": "20:30",
+          "type": "check-in",
+          "text": "晚上回到民宿休息 · Wanaka 民宿"
+        }
+      ]
+    },
+    {
+      "day": 6,
+      "date": "2026-09-30",
+      "title": "瓦纳卡 · Roys Peak",
+      "locations": [
+        "瓦纳卡"
+      ],
+      "schedule": [
+        {
+          "time": "06:00",
+          "type": "check-out",
+          "text": "早上从民宿出发 · Wanaka 民宿"
+        },
+        {
+          "id": "d6-roys",
+          "time": "07:00",
+          "type": "hike",
+          "text": "Roys Peak 徒步",
+          "placeId": "p_wanaka"
+        },
+        {
+          "time": "18:00",
+          "type": "check-in",
+          "text": "晚上回到民宿休息 · Wanaka 民宿"
+        }
+      ]
+    },
+    {
+      "day": 7,
+      "date": "2026-10-01",
+      "title": "瓦纳卡 → 皇后镇",
+      "locations": [
+        "瓦纳卡",
+        "皇后镇",
+        "格林诺奇"
+      ],
+      "schedule": [
+        {
+          "time": "08:30",
+          "type": "check-out",
+          "text": "早上从民宿退房出发 · Wanaka 民宿"
+        },
+        {
+          "id": "d7-drive",
+          "time": "09:30",
+          "type": "drive",
+          "text": "自驾瓦纳卡 → 皇后镇（经 Crown Range Road，约 1.5 小时）",
+          "placeId": "p_queenstown"
+        },
+        {
+          "id": "d7-glen",
+          "time": "14:00",
+          "type": "attraction",
+          "text": "Glenorchy 格林诺奇",
+          "placeId": "p_glenorchy"
+        },
+        {
+          "id": "d7-ci",
+          "time": "15:00",
+          "type": "check-in",
+          "text": "入住 Queenstown Airbnb",
+          "placeId": "p_queenstown"
+        },
+        {
+          "time": "20:00",
+          "type": "check-in",
+          "text": "晚上回到民宿休息 · Queenstown 民宿"
+        }
+      ]
+    },
+    {
+      "day": 8,
+      "date": "2026-10-02",
+      "title": "皇后镇",
+      "locations": [
+        "皇后镇",
+        "格林诺奇"
+      ],
+      "schedule": [
+        {
+          "time": "09:00",
+          "type": "check-out",
+          "text": "早上从民宿出发 · Queenstown 民宿"
+        },
+        {
+          "id": "d8-glen",
+          "time": "09:30",
+          "type": "attraction",
+          "text": "Glenorchy 一日游",
+          "placeId": "p_glenorchy"
+        },
+        {
+          "id": "d8-sky",
+          "time": "16:00",
+          "type": "attraction",
+          "text": "Skyline Queenstown 天空缆车",
+          "placeId": "p_queenstown"
+        },
+        {
+          "time": "19:30",
+          "type": "check-in",
+          "text": "晚上回到民宿休息 · Queenstown 民宿"
+        }
+      ]
+    },
+    {
+      "day": 9,
+      "date": "2026-10-03",
+      "title": "皇后镇 → 但尼丁 → 奥马鲁",
+      "locations": [
+        "皇后镇",
+        "但尼丁",
+        "奥马鲁"
+      ],
+      "schedule": [
+        {
+          "time": "07:00",
+          "type": "check-out",
+          "text": "早上从民宿退房出发 · Queenstown 民宿"
+        },
+        {
+          "id": "d9-drive",
+          "time": "08:00",
+          "type": "drive",
+          "text": "自驾皇后镇 → 但尼丁 → 奥马鲁（约 5 小时）",
+          "placeId": "p_dunedin"
+        },
+        {
+          "id": "d9-station",
+          "time": "12:00",
+          "type": "attraction",
+          "text": "Dunedin Railway Station 但尼丁火车站",
+          "placeId": "p_dunedin"
+        },
+        {
+          "id": "d9-bald",
+          "time": "13:30",
+          "type": "attraction",
+          "text": "Baldwin Street 鲍德温街"
+        },
+        {
+          "id": "d9-vic",
+          "time": "15:00",
+          "type": "attraction",
+          "text": "The Victorian Heritage Centre"
+        },
+        {
+          "id": "d9-ci",
+          "time": "15:00",
+          "type": "check-in",
+          "text": "入住 Oamaru Airbnb",
+          "placeId": "p_oamaru"
+        },
+        {
+          "time": "20:00",
+          "type": "check-in",
+          "text": "晚上回到民宿休息 · Oamaru 民宿"
+        }
+      ]
+    },
+    {
+      "day": 10,
+      "date": "2026-10-04",
+      "title": "奥马鲁 → 基督城",
+      "locations": [
+        "奥马鲁",
+        "基督城"
+      ],
+      "schedule": [
+        {
+          "time": "08:00",
+          "type": "check-out",
+          "text": "早上从民宿退房出发 · Oamaru 民宿"
+        },
+        {
+          "id": "d10-drive",
+          "time": "09:00",
+          "type": "drive",
+          "text": "自驾奥马鲁 → 基督城（约 3 小时）",
+          "placeId": "p_chc"
+        },
+        {
+          "id": "d10-coast",
+          "time": "11:00",
+          "type": "attraction",
+          "text": "Oamaru Coast 奥马鲁海岸",
+          "placeId": "p_oamaru"
+        },
+        {
+          "id": "d10-ci",
+          "time": "14:00",
+          "type": "check-in",
+          "text": "入住 Christchurch Airport Palms Motel",
+          "placeId": "p_chc"
+        },
+        {
+          "time": "20:00",
+          "type": "check-in",
+          "text": "晚上回到酒店休息 · Christchurch 汽车旅馆"
+        }
+      ]
+    },
+    {
+      "day": 11,
+      "date": "2026-10-05",
+      "title": "基督城 → 奥克兰 → 香港",
+      "locations": [
+        "基督城",
+        "奥克兰",
+        "香港机场"
+      ],
+      "schedule": [
+        {
+          "time": "06:00",
+          "type": "check-out",
+          "text": "早上从酒店退房出发赴机场还车 · Christchurch 汽车旅馆"
+        },
+        {
+          "id": "d11-r",
+          "time": "08:10",
+          "type": "flight",
+          "text": "NZ534 基督城 → 奥克兰 08:10-09:35（⚠ 与 08:30 还车冲突，待核对）",
+          "placeId": "p_chc"
+        },
+        {
+          "id": "d11-f",
+          "time": "11:15",
+          "type": "flight",
+          "text": "NZ081 奥克兰 → 香港 11:15-17:45（返程）",
+          "placeId": "p_akl"
+        },
+        {
+          "time": "17:45",
+          "type": "note",
+          "text": "抵达香港，行程结束"
+        }
+      ]
+    }
+  ],
+  "places": [
+    {
+      "id": "p_akl",
+      "nameZh": "奥克兰",
+      "name": "Auckland",
+      "geo": {
+        "lat": -36.85,
+        "lng": 174.76
+      }
+    },
+    {
+      "id": "p_chc",
+      "nameZh": "基督城",
+      "name": "Christchurch",
+      "geo": {
+        "lat": -43.53,
+        "lng": 172.64
+      }
+    },
+    {
+      "id": "p_tek",
+      "nameZh": "特卡波",
+      "name": "Lake Tekapo",
+      "geo": {
+        "lat": -44.01,
+        "lng": 170.48
+      }
+    },
+    {
+      "id": "p_mtCook",
+      "nameZh": "库克山",
+      "name": "Mount Cook",
+      "geo": {
+        "lat": -43.59,
+        "lng": 170.14
+      }
+    },
+    {
+      "id": "p_pukaki",
+      "nameZh": "普卡基湖",
+      "name": "Lake Pukaki",
+      "geo": {
+        "lat": -44.08,
+        "lng": 170.18
+      }
+    },
+    {
+      "id": "p_wanaka",
+      "nameZh": "瓦纳卡",
+      "name": "Wanaka",
+      "geo": {
+        "lat": -44.7,
+        "lng": 169.13
+      }
+    },
+    {
+      "id": "p_queenstown",
+      "nameZh": "皇后镇",
+      "name": "Queenstown",
+      "geo": {
+        "lat": -45.03,
+        "lng": 168.66
+      }
+    },
+    {
+      "id": "p_glenorchy",
+      "nameZh": "格林诺奇",
+      "name": "Glenorchy",
+      "geo": {
+        "lat": -44.85,
+        "lng": 168.39
+      }
+    },
+    {
+      "id": "p_dunedin",
+      "nameZh": "但尼丁",
+      "name": "Dunedin",
+      "geo": {
+        "lat": -45.87,
+        "lng": 170.5
+      }
+    },
+    {
+      "id": "p_oamaru",
+      "nameZh": "奥马鲁",
+      "name": "Oamaru",
+      "geo": {
+        "lat": -45.1,
+        "lng": 170.97
+      }
+    }
+  ],
+  "restaurants": [],
+  "bookingsAndTickets": [],
+  "ticketPlanning": {
+    "statusStorage": "local",
+    "statusStorageNote": "门票状态默认只保存在当前浏览器。",
+    "items": []
+  },
+  "preTrip": {
+    "packingItems": [
+      {
+        "id": "pack001",
+        "text": "耳机",
+        "completed": false,
+        "category": "0.随身物品"
+      },
+      {
+        "id": "pack002",
+        "text": "迷你雨伞",
+        "completed": false,
+        "category": "0.随身物品"
+      },
+      {
+        "id": "pack003",
+        "text": "充电宝",
+        "completed": false,
+        "category": "0.随身物品"
+      },
+      {
+        "id": "pack004",
+        "text": "Type C充电线*5",
+        "completed": false,
+        "category": "0.随身物品"
+      },
+      {
+        "id": "pack005",
+        "text": "纸巾1包",
+        "completed": false,
+        "category": "0.随身物品"
+      },
+      {
+        "id": "pack006",
+        "text": "湿巾1包",
+        "completed": false,
+        "category": "0.随身物品"
+      },
+      {
+        "id": "pack007",
+        "text": "护照",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack008",
+        "text": "信用卡（VISA+AMERICAN EXPRESS",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack009",
+        "text": "新西兰币",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack010",
+        "text": "人民币（备用）",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack011",
+        "text": "港币（备用）",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack012",
+        "text": "银行卡（银联）",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack013",
+        "text": "八达通",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack014",
+        "text": "身份证",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack015",
+        "text": "小钱包",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack016",
+        "text": "纸巾1包",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack017",
+        "text": "湿巾1包",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack018",
+        "text": "数据线+转换头",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack019",
+        "text": "垃圾袋",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack020",
+        "text": "伞",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack021",
+        "text": "备用鞋&袜子",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack022",
+        "text": "杯子",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack023",
+        "text": "手机支架",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack024",
+        "text": "护照",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack025",
+        "text": "港澳通行证及签注",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack026",
+        "text": "身份证",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack027",
+        "text": "信用卡（VISA+AMERICAN EXPRESS）（贴上密码）（记得锁卡）",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack028",
+        "text": "新西兰币",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack029",
+        "text": "港币（备用）",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack030",
+        "text": "银行卡（银联）",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack031",
+        "text": "参与汇率优惠及返利活动",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack032",
+        "text": "Applepay",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack033",
+        "text": "八达通",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack034",
+        "text": "小钱包",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack035",
+        "text": "取卡针&空卡槽一个",
+        "completed": false,
+        "category": "1.必带类"
+      },
+      {
+        "id": "pack036",
+        "text": "签证打印版",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack037",
+        "text": "驾照原件+翻译件",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack038",
+        "text": "租车确认单+保险单",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack039",
+        "text": "机票确认单",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack040",
+        "text": "住宿确认单",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack041",
+        "text": "NZTD申报",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack042",
+        "text": "香港流量1天*2",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack043",
+        "text": "新西兰电话卡",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack044",
+        "text": "申报物品清单",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack045",
+        "text": "Google Maps 离线地图",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack046",
+        "text": "旅行保险",
+        "completed": false,
+        "category": "2.准备类"
+      },
+      {
+        "id": "pack047",
+        "text": "厚外套",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack048",
+        "text": "冲锋衣",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack049",
+        "text": "内搭/毛衣",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack050",
+        "text": "裤子",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack051",
+        "text": "裙子",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack052",
+        "text": "安全裤",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack053",
+        "text": "秋裤",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack054",
+        "text": "袜子",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack055",
+        "text": "鞋子",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack056",
+        "text": "内衣/胸贴",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack057",
+        "text": "内裤",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack058",
+        "text": "睡衣",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack059",
+        "text": "泳衣",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack060",
+        "text": "帽子",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack061",
+        "text": "围巾",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack062",
+        "text": "手套",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack063",
+        "text": "防水鞋套",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack064",
+        "text": "墨镜及眼镜盒",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack065",
+        "text": "拖鞋",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack066",
+        "text": "娃娃",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack067",
+        "text": "挂件",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack068",
+        "text": "背包",
+        "completed": false,
+        "category": "3.衣物类"
+      },
+      {
+        "id": "pack069",
+        "text": "化妆包",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack070",
+        "text": "卸妆油",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack071",
+        "text": "假睫毛",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack072",
+        "text": "隐形眼镜",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack073",
+        "text": "隐形眼镜镊子",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack074",
+        "text": "香水",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack075",
+        "text": "护手霜",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack076",
+        "text": "唇膏",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack077",
+        "text": "防晒霜",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack078",
+        "text": "卫生巾",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack079",
+        "text": "发圈/发卡",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack080",
+        "text": "刘海夹",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack081",
+        "text": "牙刷",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack082",
+        "text": "牙刷盒",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack083",
+        "text": "漱口水",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack084",
+        "text": "牙膏",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack085",
+        "text": "梳子",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack086",
+        "text": "洗发水",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack087",
+        "text": "沐浴露",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack088",
+        "text": "护发素",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack089",
+        "text": "护发精油",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack090",
+        "text": "洗面奶",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack091",
+        "text": "干发帽",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack092",
+        "text": "一次性浴巾（睿带（袋装）",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack093",
+        "text": "洗脸巾（睿带",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack094",
+        "text": "一次性床单被套（2套）",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack095",
+        "text": "身体乳",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack096",
+        "text": "面膜",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack097",
+        "text": "指甲剪",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack098",
+        "text": "剪刀",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack099",
+        "text": "垃圾袋（睿带",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack100",
+        "text": "车载垃圾袋（睿带",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack101",
+        "text": "牙线",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack102",
+        "text": "口罩",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack103",
+        "text": "雨伞",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack104",
+        "text": "太阳伞",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack105",
+        "text": "透明雨伞",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack106",
+        "text": "小包纸巾",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack107",
+        "text": "日用纸巾",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack108",
+        "text": "鼻炎纸巾",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack109",
+        "text": "纯水湿巾",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack110",
+        "text": "酒精湿巾",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack111",
+        "text": "封口机/夹子",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack112",
+        "text": "密封袋",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack113",
+        "text": "饮水杯&吸管",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack114",
+        "text": "车载颈枕（睿带",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack115",
+        "text": "脏衣袋",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack116",
+        "text": "衣架*4（睿带",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack117",
+        "text": "洗衣液",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack118",
+        "text": "剃须刀",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack119",
+        "text": "电吹风（配件）",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack120",
+        "text": "电脑",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack121",
+        "text": "ipad",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack122",
+        "text": "耳机",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack123",
+        "text": "充电宝（带标识）",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack124",
+        "text": "转换头",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack125",
+        "text": "排插（睿带",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack126",
+        "text": "充电头（睿带",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack127",
+        "text": "数据线（电脑、手机、lightning、手表、车载充电线）",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack128",
+        "text": "车载手机支架",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack129",
+        "text": "车载充电器（点烟器转usb）",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack130",
+        "text": "手机壳",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack131",
+        "text": "清洁布",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack132",
+        "text": "钢化膜",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack133",
+        "text": "烧水杯",
+        "completed": false,
+        "category": "4.日用类"
+      },
+      {
+        "id": "pack134",
+        "text": "咖啡/茶叶/抹茶",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack135",
+        "text": "蒜粉/烧烤料",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack136",
+        "text": "大餐救星",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack137",
+        "text": "感冒药（999+小柴胡+布洛芬+奥司他韦2颗）",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack138",
+        "text": "清火药",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack139",
+        "text": "芥末（睿带",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack140",
+        "text": "健胃消食片（睿带",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack141",
+        "text": "腹泻药（睿带",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack142",
+        "text": "创口贴（睿带",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack143",
+        "text": "双飞人（睿带",
+        "completed": false,
+        "category": "5.食品及药品类"
+      },
+      {
+        "id": "pack144",
+        "text": "A7M3+28-200mm",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack145",
+        "text": "24GM镜头",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack146",
+        "text": "GR3X及备用电池",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack147",
+        "text": "Osmo Pocket 4P",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack148",
+        "text": "无人机及遥控器【是否需要申报】",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack149",
+        "text": "相机脚架",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack150",
+        "text": "小脚架",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack151",
+        "text": "拍立得&相纸",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack152",
+        "text": "硬盘（睿需带",
+        "completed": false,
+        "category": "6.相机类"
+      },
+      {
+        "id": "pack153",
+        "text": "内存卡转换器（睿可带",
+        "completed": false,
+        "category": "6.相机类"
+      }
+    ],
+    "preparationsExplicitlyMentioned": [
+      "NZTD 申报",
+      "新西兰电话卡 / 香港流量",
+      "Google Maps 离线地图",
+      "旅行保险",
+      "驾照原件+翻译件"
+    ],
+    "missingNote": ""
+  },
+  "mapLinks": {
+    "providedGoogleMapsLinks": [],
+    "note": "",
+    "cityLevelNavigationDisabled": false,
+    "navigationPolicy": {
+      "noNavigationTypes": [
+        "flight",
+        "note",
+        "rest"
+      ],
+      "selfNavigationTypes": [
+        "drive",
+        "return",
+        "transfer",
+        "check-in",
+        "check-out",
+        "restaurant",
+        "attraction",
+        "walk",
+        "hike"
+      ]
+    },
+    "navigationPlaces": []
+  },
+  "issuesAndUncertainties": [
+    {
+      "id": "iss-car-flight",
+      "title": "10/5 基督城还车与航班冲突",
+      "severity": "warning",
+      "detail": "租车凭证还车时间 10/5 08:30，但 NZ534 当天 08:10 已从基督城起飞；且订单提示航班有变动。请核对航司最新时刻与准确还车时间。"
+    }
+  ],
+  "map": {
+    "schemaVersion": "1.0-lite",
+    "mapMode": "template-auto",
+    "templateId": "auto",
+    "disclaimer": "本图仅表达地点的相对方位与路线顺序，不代表真实比例或精确地理边界。",
+    "region": {
+      "id": "nz",
+      "label": "新西兰",
+      "countryCode": "NZ"
+    },
+    "places": [
+      {
+        "id": "p_chc",
+        "nameZh": "基督城",
+        "geo": {
+          "lat": -43.53,
+          "lng": 172.64
+        }
+      },
+      {
+        "id": "p_tek",
+        "nameZh": "特卡波",
+        "geo": {
+          "lat": -44.01,
+          "lng": 170.48
+        }
+      },
+      {
+        "id": "p_mtCook",
+        "nameZh": "库克山",
+        "geo": {
+          "lat": -43.59,
+          "lng": 170.14
+        }
+      },
+      {
+        "id": "p_pukaki",
+        "nameZh": "普卡基湖",
+        "geo": {
+          "lat": -44.08,
+          "lng": 170.18
+        }
+      },
+      {
+        "id": "p_wanaka",
+        "nameZh": "瓦纳卡",
+        "geo": {
+          "lat": -44.7,
+          "lng": 169.13
+        }
+      },
+      {
+        "id": "p_queenstown",
+        "nameZh": "皇后镇",
+        "geo": {
+          "lat": -45.03,
+          "lng": 168.66
+        }
+      },
+      {
+        "id": "p_glenorchy",
+        "nameZh": "格林诺奇",
+        "geo": {
+          "lat": -44.85,
+          "lng": 168.39
+        }
+      },
+      {
+        "id": "p_dunedin",
+        "nameZh": "但尼丁",
+        "geo": {
+          "lat": -45.87,
+          "lng": 170.5
+        }
+      },
+      {
+        "id": "p_oamaru",
+        "nameZh": "奥马鲁",
+        "geo": {
+          "lat": -45.1,
+          "lng": 170.97
+        }
+      }
+    ],
+    "routes": [
+      {
+        "day": 3,
+        "placeIds": [
+          "p_chc",
+          "p_tek"
+        ]
+      },
+      {
+        "day": 4,
+        "placeIds": [
+          "p_tek",
+          "p_mtCook",
+          "p_pukaki"
+        ]
+      },
+      {
+        "day": 5,
+        "placeIds": [
+          "p_tek",
+          "p_wanaka"
+        ]
+      },
+      {
+        "day": 7,
+        "placeIds": [
+          "p_wanaka",
+          "p_queenstown",
+          "p_glenorchy"
+        ]
+      },
+      {
+        "day": 9,
+        "placeIds": [
+          "p_queenstown",
+          "p_dunedin",
+          "p_oamaru"
+        ]
+      },
+      {
+        "day": 10,
+        "placeIds": [
+          "p_oamaru",
+          "p_chc"
+        ]
+      }
+    ],
+    "dailyRoutes": [
+      {
+        "day": 3,
+        "placeIds": [
+          "p_chc",
+          "p_tek"
+        ]
+      },
+      {
+        "day": 4,
+        "placeIds": [
+          "p_tek",
+          "p_mtCook",
+          "p_pukaki"
+        ]
+      },
+      {
+        "day": 5,
+        "placeIds": [
+          "p_tek",
+          "p_wanaka"
+        ]
+      },
+      {
+        "day": 7,
+        "placeIds": [
+          "p_wanaka",
+          "p_queenstown",
+          "p_glenorchy"
+        ]
+      },
+      {
+        "day": 9,
+        "placeIds": [
+          "p_queenstown",
+          "p_dunedin",
+          "p_oamaru"
+        ]
+      },
+      {
+        "day": 10,
+        "placeIds": [
+          "p_oamaru",
+          "p_chc"
+        ]
+      }
+    ]
+  },
+  "routeMap": {
+    "defaultRegionId": "nz",
+    "regions": [
+      {
+        "id": "nz",
+        "label": "新西兰",
+        "countryCode": "NZ",
+        "scope": "template-schematic",
+        "mapMode": "frozen-template",
+        "templateId": "upland-basin",
+        "mapModeReason": "balanced-or-east-west-route",
+        "mapModeMetrics": {
+          "placeCount": 9,
+          "geoPlaceCount": 9,
+          "widthKm": 336.31,
+          "heightKm": 259.74,
+          "spanKm": 369.22,
+          "averageNearestKm": 64.75,
+          "components": 1,
+          "largestLegKm": 219.38,
+          "jumpRatio": 2.36
+        },
+        "days": [
+          3,
+          4,
+          5,
+          7,
+          9,
+          10
+        ],
+        "canvas": {
+          "width": 1448,
+          "height": 1086
+        },
+        "projection": {
+          "type": "relative-schematic",
+          "bounds": null
+        },
+        "baseImage": "assets/maps/templates/template-06-upland-basin.webp",
+        "title": "新西兰 · 旅行路线",
+        "ariaLabel": "新西兰模板化旅行路线示意图，共6天",
+        "disclaimer": "本图仅表达地点的相对方位与路线顺序，不代表真实比例或精确地理边界。",
+        "heading": {
+          "text": "新西兰",
+          "x": 33,
+          "y": 105,
+          "size": 40
+        },
+        "legend": {
+          "x": 35,
+          "y": 168,
+          "gap": 43
+        },
+        "annotations": [],
+        "routes": [
+          {
+            "day": 3,
+            "color": "#618344",
+            "placeIds": [
+              "p_chc",
+              "p_tek"
+            ],
+            "paths": [
+              "M1153.4 285.68 C1066.2 344.1 970.2 374.2 870.94 374.36"
+            ],
+            "overviewPaths": [
+              "M1153.4 285.68 C1066.2 344.1 970.2 374.2 870.94 374.36"
+            ]
+          },
+          {
+            "day": 4,
+            "color": "#209aaa",
+            "placeIds": [
+              "p_tek",
+              "p_mtCook",
+              "p_pukaki"
+            ],
+            "paths": [
+              "M870.94 374.36 C853.3 340.8 827.9 314.6 796.35 297.51 C800.1 335.5 793.3 371.6 776.34 403.46"
+            ],
+            "overviewPaths": [
+              "M870.94 374.36 C853.3 340.8 827.9 314.6 796.35 297.51 C800.1 335.5 793.3 371.6 776.34 403.46"
+            ]
+          },
+          {
+            "day": 5,
+            "color": "#8865a5",
+            "placeIds": [
+              "p_tek",
+              "p_wanaka"
+            ],
+            "paths": [
+              "M870.94 374.36 C811.4 445.0 737.5 493.9 653.5 518.14"
+            ],
+            "overviewPaths": [
+              "M870.94 374.36 C811.4 445.0 737.5 493.9 653.5 518.14"
+            ]
+          },
+          {
+            "day": 7,
+            "color": "#397dc1",
+            "placeIds": [
+              "p_wanaka",
+              "p_queenstown",
+              "p_glenorchy"
+            ],
+            "paths": [
+              "M653.5 518.14 C643.9 552.9 625.7 582.3 599.9 604.62 C583.5 573.5 559.9 549.2 530.6 533.37"
+            ],
+            "overviewPaths": [
+              "M653.5 518.14 C643.9 552.9 625.7 582.3 599.9 604.62 C583.5 573.5 559.9 549.2 530.6 533.37"
+            ]
+          },
+          {
+            "day": 9,
+            "color": "#618344",
+            "placeIds": [
+              "p_queenstown",
+              "p_dunedin",
+              "p_oamaru"
+            ],
+            "paths": [
+              "M599.9 604.62 C699.2 630.7 783.5 681.6 847.86 754.32 C886.1 708.6 908.9 656.2 914.96 600.11"
+            ],
+            "overviewPaths": [
+              "M599.9 604.62 C699.2 630.7 783.5 681.6 847.86 754.32 C886.1 708.6 908.9 656.2 914.96 600.11"
+            ]
+          },
+          {
+            "day": 10,
+            "color": "#209aaa",
+            "placeIds": [
+              "p_oamaru",
+              "p_chc"
+            ],
+            "paths": [
+              "M914.96 600.11 C1019.9 511.3 1101.0 404.4 1153.4 285.68"
+            ],
+            "overviewPaths": [
+              "M914.96 600.11 C1019.9 511.3 1101.0 404.4 1153.4 285.68"
+            ]
+          }
+        ],
+        "places": [
+          {
+            "id": "p_chc",
+            "x": 1153.4,
+            "y": 285.68,
+            "color": "#618344",
+            "tx": 1185.4,
+            "ty": 253.68,
+            "size": 24,
+            "anchor": "start",
+            "lines": [
+              "基督城"
+            ],
+            "query": "基督城 新西兰",
+            "geo": {
+              "lat": -43.53,
+              "lng": 172.64
+            },
+            "days": [
+              3,
+              10
+            ]
+          },
+          {
+            "id": "p_tek",
+            "x": 870.94,
+            "y": 374.36,
+            "color": "#618344",
+            "tx": 838.94,
+            "ty": 342.36,
+            "size": 24,
+            "anchor": "end",
+            "lines": [
+              "特卡波"
+            ],
+            "query": "特卡波 新西兰",
+            "geo": {
+              "lat": -44.01,
+              "lng": 170.48
+            },
+            "days": [
+              3,
+              4,
+              5
+            ]
+          },
+          {
+            "id": "p_mtCook",
+            "x": 796.35,
+            "y": 297.51,
+            "color": "#209aaa",
+            "tx": 874.35,
+            "ty": 235.51,
+            "size": 24,
+            "anchor": "start",
+            "lines": [
+              "库克山"
+            ],
+            "query": "库克山 新西兰",
+            "geo": {
+              "lat": -43.59,
+              "lng": 170.14
+            },
+            "days": [
+              4
+            ]
+          },
+          {
+            "id": "p_pukaki",
+            "x": 776.34,
+            "y": 403.46,
+            "color": "#209aaa",
+            "tx": 914.34,
+            "ty": 315.46,
+            "size": 24,
+            "anchor": "start",
+            "lines": [
+              "普卡基湖"
+            ],
+            "query": "普卡基湖 新西兰",
+            "geo": {
+              "lat": -44.08,
+              "lng": 170.18
+            },
+            "days": [
+              4
+            ]
+          },
+          {
+            "id": "p_wanaka",
+            "x": 653.5,
+            "y": 518.14,
+            "color": "#8865a5",
+            "tx": 515.5,
+            "ty": 430.14,
+            "size": 24,
+            "anchor": "end",
+            "lines": [
+              "瓦纳卡"
+            ],
+            "query": "瓦纳卡 新西兰",
+            "geo": {
+              "lat": -44.7,
+              "lng": 169.13
+            },
+            "days": [
+              5,
+              7
+            ]
+          },
+          {
+            "id": "p_queenstown",
+            "x": 599.9,
+            "y": 604.62,
+            "color": "#397dc1",
+            "tx": 461.9,
+            "ty": 706.62,
+            "size": 24,
+            "anchor": "end",
+            "lines": [
+              "皇后镇"
+            ],
+            "query": "皇后镇 新西兰",
+            "geo": {
+              "lat": -45.03,
+              "lng": 168.66
+            },
+            "days": [
+              7,
+              9
+            ]
+          },
+          {
+            "id": "p_glenorchy",
+            "x": 530.6,
+            "y": 533.37,
+            "color": "#397dc1",
+            "tx": 498.6,
+            "ty": 501.37,
+            "size": 24,
+            "anchor": "end",
+            "lines": [
+              "格林诺奇"
+            ],
+            "query": "格林诺奇 新西兰",
+            "geo": {
+              "lat": -44.85,
+              "lng": 168.39
+            },
+            "days": [
+              7
+            ]
+          },
+          {
+            "id": "p_dunedin",
+            "x": 847.86,
+            "y": 754.32,
+            "color": "#618344",
+            "tx": 815.86,
+            "ty": 722.32,
+            "size": 24,
+            "anchor": "end",
+            "lines": [
+              "但尼丁"
+            ],
+            "query": "但尼丁 新西兰",
+            "geo": {
+              "lat": -45.87,
+              "lng": 170.5
+            },
+            "days": [
+              9
+            ]
+          },
+          {
+            "id": "p_oamaru",
+            "x": 914.96,
+            "y": 600.11,
+            "color": "#618344",
+            "tx": 992.96,
+            "ty": 538.11,
+            "size": 24,
+            "anchor": "start",
+            "lines": [
+              "奥马鲁"
+            ],
+            "query": "奥马鲁 新西兰",
+            "geo": {
+              "lat": -45.1,
+              "lng": 170.97
+            },
+            "days": [
+              9,
+              10
+            ]
+          }
+        ],
+        "overviewPlaceIds": [
+          "p_chc",
+          "p_tek",
+          "p_mtCook",
+          "p_pukaki",
+          "p_wanaka",
+          "p_queenstown",
+          "p_glenorchy",
+          "p_dunedin",
+          "p_oamaru"
+        ],
+        "dailyLayouts": {
+          "3": {
+            "places": [
+              "p_chc",
+              "p_tek"
+            ],
+            "labels": {
+              "p_chc": {
+                "x": 1185.4,
+                "y": 253.68,
+                "anchor": "start"
+              },
+              "p_tek": {
+                "x": 838.94,
+                "y": 342.36,
+                "anchor": "end"
+              }
+            },
+            "transport": [
+              {
+                "items": [],
+                "x": 1012.17,
+                "y": 330.02
+              }
+            ]
+          },
+          "4": {
+            "places": [
+              "p_tek",
+              "p_mtCook",
+              "p_pukaki"
+            ],
+            "labels": {
+              "p_tek": {
+                "x": 838.94,
+                "y": 342.36,
+                "anchor": "end"
+              },
+              "p_mtCook": {
+                "x": 874.35,
+                "y": 235.51,
+                "anchor": "start"
+              },
+              "p_pukaki": {
+                "x": 914.34,
+                "y": 315.46,
+                "anchor": "start"
+              }
+            },
+            "transport": [
+              {
+                "items": [],
+                "x": 833.64,
+                "y": 335.94
+              },
+              {
+                "items": [],
+                "x": 786.35,
+                "y": 350.49
+              }
+            ]
+          },
+          "5": {
+            "places": [
+              "p_tek",
+              "p_wanaka"
+            ],
+            "labels": {
+              "p_tek": {
+                "x": 838.94,
+                "y": 342.36,
+                "anchor": "end"
+              },
+              "p_wanaka": {
+                "x": 515.5,
+                "y": 430.14,
+                "anchor": "end"
+              }
+            },
+            "transport": [
+              {
+                "items": [],
+                "x": 762.22,
+                "y": 446.25
+              }
+            ]
+          },
+          "7": {
+            "places": [
+              "p_wanaka",
+              "p_queenstown",
+              "p_glenorchy"
+            ],
+            "labels": {
+              "p_wanaka": {
+                "x": 515.5,
+                "y": 430.14,
+                "anchor": "end"
+              },
+              "p_queenstown": {
+                "x": 461.9,
+                "y": 706.62,
+                "anchor": "end"
+              },
+              "p_glenorchy": {
+                "x": 498.6,
+                "y": 501.37,
+                "anchor": "end"
+              }
+            },
+            "transport": [
+              {
+                "items": [],
+                "x": 626.7,
+                "y": 561.38
+              },
+              {
+                "items": [],
+                "x": 565.25,
+                "y": 569
+              }
+            ]
+          },
+          "9": {
+            "places": [
+              "p_queenstown",
+              "p_dunedin",
+              "p_oamaru"
+            ],
+            "labels": {
+              "p_queenstown": {
+                "x": 461.9,
+                "y": 706.62,
+                "anchor": "end"
+              },
+              "p_dunedin": {
+                "x": 815.86,
+                "y": 722.32,
+                "anchor": "end"
+              },
+              "p_oamaru": {
+                "x": 992.96,
+                "y": 538.11,
+                "anchor": "start"
+              }
+            },
+            "transport": [
+              {
+                "items": [],
+                "x": 723.88,
+                "y": 679.47
+              },
+              {
+                "items": [],
+                "x": 881.41,
+                "y": 677.22
+              }
+            ]
+          },
+          "10": {
+            "places": [
+              "p_oamaru",
+              "p_chc"
+            ],
+            "labels": {
+              "p_oamaru": {
+                "x": 992.96,
+                "y": 538.11,
+                "anchor": "start"
+              },
+              "p_chc": {
+                "x": 1185.4,
+                "y": 253.68,
+                "anchor": "start"
+              }
+            },
+            "transport": [
+              {
+                "items": [],
+                "x": 1034.18,
+                "y": 442.89
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "weather": [
+    {
+      "day": 1,
+      "date": "2026-09-25",
+      "locations": [
+        {
+          "location": "香港西九龙",
+          "condition": "大致晴朗",
+          "icon": "🌤️",
+          "tempHigh": 30,
+          "tempLow": 25,
+          "precip": 20
+        },
+        {
+          "location": "香港机场",
+          "condition": "大致晴朗",
+          "icon": "🌤️",
+          "tempHigh": 30,
+          "tempLow": 25,
+          "precip": 20
+        }
+      ]
+    },
+    {
+      "day": 2,
+      "date": "2026-09-26",
+      "locations": [
+        {
+          "location": "奥克兰",
+          "condition": "阵雨",
+          "icon": "🌦️",
+          "tempHigh": 16,
+          "tempLow": 11,
+          "precip": 93
+        }
+      ]
+    },
+    {
+      "day": 3,
+      "date": "2026-09-27",
+      "locations": [
+        {
+          "location": "奥克兰",
+          "condition": "阵雨",
+          "icon": "🌦️",
+          "tempHigh": 16,
+          "tempLow": 11,
+          "precip": 47
+        },
+        {
+          "location": "基督城",
+          "condition": "强阵雨",
+          "icon": "🌧️",
+          "tempHigh": 13,
+          "tempLow": 3,
+          "precip": 95
+        },
+        {
+          "location": "特卡波",
+          "condition": "阵雪",
+          "icon": "🌨️",
+          "tempHigh": 6,
+          "tempLow": -1,
+          "precip": 96
+        }
+      ]
+    },
+    {
+      "day": 4,
+      "date": "2026-09-28",
+      "locations": [
+        {
+          "location": "特卡波",
+          "condition": "局部多云",
+          "icon": "⛅",
+          "tempHigh": 8,
+          "tempLow": -2,
+          "precip": 8
+        },
+        {
+          "location": "库克山",
+          "condition": "小雪",
+          "icon": "🌨️",
+          "tempHigh": 4,
+          "tempLow": -4,
+          "precip": 24
+        },
+        {
+          "location": "普卡基湖",
+          "condition": "阴",
+          "icon": "☁️",
+          "tempHigh": 10,
+          "tempLow": -1,
+          "precip": 6
+        }
+      ]
+    },
+    {
+      "day": 5,
+      "date": "2026-09-29",
+      "locations": [
+        {
+          "location": "特卡波",
+          "condition": "局部多云",
+          "icon": "⛅",
+          "tempHigh": 11,
+          "tempLow": 1,
+          "precip": 0
+        },
+        {
+          "location": "瓦纳卡",
+          "condition": "阴",
+          "icon": "☁️",
+          "tempHigh": 14,
+          "tempLow": 7,
+          "precip": 0
+        }
+      ]
+    },
+    {
+      "day": 6,
+      "date": "2026-09-30",
+      "locations": [
+        {
+          "location": "瓦纳卡",
+          "condition": "局部多云",
+          "icon": "⛅",
+          "tempHigh": 15,
+          "tempLow": 4,
+          "precip": 2
+        }
+      ]
+    },
+    {
+      "day": 7,
+      "date": "2026-10-01",
+      "locations": [
+        {
+          "location": "瓦纳卡",
+          "condition": "阴",
+          "icon": "☁️",
+          "tempHigh": 14,
+          "tempLow": 5,
+          "precip": 22
+        },
+        {
+          "location": "皇后镇",
+          "condition": "阴",
+          "icon": "☁️",
+          "tempHigh": 13,
+          "tempLow": 3,
+          "precip": 31
+        },
+        {
+          "location": "格林诺奇",
+          "condition": "阴",
+          "icon": "☁️",
+          "tempHigh": 12,
+          "tempLow": 4,
+          "precip": 39
+        }
+      ]
+    },
+    {
+      "day": 8,
+      "date": "2026-10-02",
+      "locations": [
+        {
+          "location": "皇后镇",
+          "condition": "小雨",
+          "icon": "🌧️",
+          "tempHigh": 14,
+          "tempLow": 7,
+          "precip": 35
+        },
+        {
+          "location": "格林诺奇",
+          "condition": "小雨",
+          "icon": "🌧️",
+          "tempHigh": 13,
+          "tempLow": 8,
+          "precip": 45
+        }
+      ]
+    },
+    {
+      "day": 9,
+      "date": "2026-10-03",
+      "locations": [
+        {
+          "location": "皇后镇",
+          "condition": "小毛毛雨",
+          "icon": "🌦️",
+          "tempHigh": 14,
+          "tempLow": 5,
+          "precip": 36
+        },
+        {
+          "location": "但尼丁",
+          "condition": "小毛毛雨",
+          "icon": "🌦️",
+          "tempHigh": 14,
+          "tempLow": 4,
+          "precip": 27
+        },
+        {
+          "location": "奥马鲁",
+          "condition": "小毛毛雨",
+          "icon": "🌦️",
+          "tempHigh": 15,
+          "tempLow": 6,
+          "precip": 22
+        }
+      ]
+    },
+    {
+      "day": 10,
+      "date": "2026-10-04",
+      "locations": [
+        {
+          "location": "奥马鲁",
+          "condition": "小毛毛雨",
+          "icon": "🌦️",
+          "tempHigh": 16,
+          "tempLow": 6,
+          "precip": 22
+        },
+        {
+          "location": "基督城",
+          "condition": "阴",
+          "icon": "☁️",
+          "tempHigh": 17,
+          "tempLow": 7,
+          "precip": 16
+        }
+      ]
+    },
+    {
+      "day": 11,
+      "date": "2026-10-05",
+      "locations": [
+        {
+          "location": "基督城",
+          "condition": "阴",
+          "icon": "☁️",
+          "tempHigh": 15,
+          "tempLow": 6,
+          "precip": 18
+        },
+        {
+          "location": "奥克兰",
+          "condition": "阴",
+          "icon": "☁️",
+          "tempHigh": 17,
+          "tempLow": 10,
+          "precip": 25
+        },
+        {
+          "location": "香港机场",
+          "condition": "小毛毛雨",
+          "icon": "🌦️",
+          "tempHigh": 28,
+          "tempLow": 25,
+          "precip": 49
+        }
+      ]
+    }
+  ]
+}

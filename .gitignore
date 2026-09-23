@@ -1,0 +1,13 @@
+.DS_Store
+._*
+__MACOSX/
+.env
+.env.*
+.dev.vars
+node_modules/
+.wrangler/
+.local-preview-data.json
+source-files/
+private/
+source-facts.json
+reports/private/

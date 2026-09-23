@@ -1,0 +1,11 @@
+{
+  "name": "nz-south-island-2026",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "preview": "node local-preview-server.mjs",
+    "preview:shared": "node dev/mock-shared-api.mjs",
+    "preflight": "node scripts/preflight.mjs"
+  }
+}

@@ -1,0 +1,206 @@
+/* 旅行餐饮 (Dining) — DIY add-on. Same-level view as 旅行信息 / 记账.
+   Reuses ledger-* component styles; this file adds the view switch and dining-specific pieces. */
+
+/* Third site view, matching .ledger-view behaviour. */
+.dining-view {
+  min-height: calc(100vh - 48px);
+  min-height: calc(100dvh - 48px);
+  background: #fafbf9;
+}
+.dining-view:not([hidden]) { animation: dining-view-in .16s ease-out; }
+body[data-active-view="dining"] { background: #fafbf9; }
+body[data-active-view="dining"] .topbar { background: rgba(250, 251, 249, .93); }
+@keyframes dining-view-in {
+  from { opacity: .45; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Top navigation item (sits beside 旅行信息 and 记账). */
+.topbar .primary-navigation__dining {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 680;
+}
+.topbar .primary-navigation__dining[aria-current="page"] { color: var(--ink); }
+.topbar .primary-navigation__dining[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--lake);
+}
+
+/* City filter navigation bar, pinned to the top of the module. */
+.dining-city-nav {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0 2px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.dining-city-nav::-webkit-scrollbar { display: none; }
+.dining-city-nav button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(19, 38, 47, .13);
+  border-radius: 999px;
+  color: #66757a;
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 720;
+}
+.dining-city-nav button[aria-pressed="true"] {
+  border-color: var(--ink);
+  color: #fff;
+  background: var(--ink);
+}
+
+/* Forms: stack direct children with one consistent rhythm. */
+.dining-app .ledger-bill-form { display: grid; gap: 15px; }
+.dining-app .ledger-bill-form .ledger-fieldset { margin-top: 0; }
+.dining-app .ledger-bill-form .ledger-primary-button { margin-top: 0; }
+.dining-field-block { display: grid; }
+.dining-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; }
+.dining-amount-block { width: min(100%, 340px); grid-template-columns: minmax(96px, 110px) minmax(0, 1fr); }
+.dining-textarea { min-height: 96px; padding: 10px 12px; font: inherit; font-size: 13px; line-height: 1.5; resize: vertical; }
+.dining-hint { margin: 12px 0 0; color: #8b9899; font-size: 11px; line-height: 1.5; }
+.dining-hint code { padding: 1px 4px; border-radius: 4px; background: #f0f3f1; font-size: 10px; }
+
+/* Category / cuisine dots. */
+.dining-mark { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--lake); }
+.dining-mark[data-dining-cuisine="日料"] { background: #d96c42; }
+.dining-mark[data-dining-cuisine="中餐"] { background: #b84635; }
+.dining-mark[data-dining-cuisine="西餐"] { background: #4c8da0; }
+.dining-mark[data-dining-cuisine="快餐"] { background: #c58b32; }
+.dining-mark[data-dining-cuisine="韩餐"] { background: #b85f76; }
+.dining-mark[data-dining-cuisine="泰餐"] { background: #5c8e62; }
+.dining-mark[data-dining-cuisine="东南亚"] { background: #4e8f86; }
+.dining-mark[data-dining-cuisine="新西兰本地"] { background: #516b55; }
+.dining-mark[data-dining-cuisine="咖啡烘焙"] { background: #8b6aa8; }
+
+.ledger-category-mark[data-dining-spend] { background: #8a9798; }
+.ledger-category-mark[data-dining-spend="早餐"] { background: #c58b32; }
+.ledger-category-mark[data-dining-spend="午餐"] { background: #4c8da0; }
+.ledger-category-mark[data-dining-spend="晚餐"] { background: #d96c42; }
+.ledger-category-mark[data-dining-spend="正餐"] { background: #b65c3a; }
+.ledger-category-mark[data-dining-spend="咖啡"] { background: #8b6aa8; }
+.ledger-category-mark[data-dining-spend="甜点"] { background: #b85f76; }
+.ledger-category-mark[data-dining-spend="饮品"] { background: #4e8f86; }
+.ledger-category-mark[data-dining-spend="酒吧"] { background: #7f72a9; }
+.ledger-category-mark[data-dining-spend="零食"] { background: #9a6b4f; }
+.ledger-category-mark[data-dining-spend="食材"] { background: #5c8e62; }
+.ledger-category-mark[data-dining-spend="外卖"] { background: #4f72a2; }
+
+/* Record rows. */
+.dining-row__meta { margin-top: 5px; color: #95a0a1; font-size: 10px; line-height: 1.5; }
+.dining-row__stars { color: #c58b32; letter-spacing: .5px; }
+.dining-row__thumbs { display: flex; gap: 6px; margin-top: 10px; }
+
+/* Image upload. */
+.dining-upload-field { display: grid; }
+.dining-upload {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 14px;
+  border: 1px dashed rgba(19, 38, 47, .22);
+  border-radius: 12px;
+  color: #66757a;
+  background: #f7f9f8;
+  cursor: pointer;
+  font-size: 12px;
+}
+.dining-upload:hover { border-color: #9fc4c9; background: #f2f8f8; }
+.dining-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.dining-upload__icon { display: grid; place-items: center; width: 28px; height: 28px; flex: 0 0 28px; border-radius: 9px; color: #fff; background: var(--lake); font-size: 17px; line-height: 1; }
+.dining-thumbs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.dining-thumbs:empty { display: none; }
+.dining-thumb { position: relative; display: block; width: 76px; height: 76px; padding: 0; border: 1px solid rgba(19, 38, 47, .12); border-radius: 10px; background: #f2f4f2; overflow: hidden; }
+.dining-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.dining-thumb button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(19, 38, 47, .72);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.dining-thumb--sm { width: 46px; height: 46px; cursor: zoom-in; }
+
+/* Image lightbox. */
+.dining-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(7, 18, 22, .86);
+}
+.dining-viewer img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+.dining-viewer__close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
+  background: rgba(255, 255, 255, .92);
+  cursor: pointer;
+  font-size: 20px;
+}
+
+/* Breakdown (by spend type) rows — each 板块 is its own card. */
+.dining-app .dining-group-list {
+  display: block;
+  margin-top: 14px;
+  border: 1px solid rgba(19, 38, 47, .1);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(18, 42, 50, .05), 0 1px 3px rgba(18, 42, 50, .03);
+  overflow: hidden;
+}
+.dining-group-row {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(19, 38, 47, .1);
+}
+.dining-group-row:first-child { border-top: 0; }
+.dining-group-row__main { min-width: 0; display: grid; gap: 4px; }
+.dining-group-row__main strong { font-size: 13px; font-weight: 740; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dining-group-row__main small { color: #95a0a1; font-size: 10px; }
+.dining-group-row__stars { color: #c58b32; font-size: 11px; letter-spacing: .5px; white-space: nowrap; }
+
+@media (max-width: 380px) {
+  .topbar .primary-navigation__dining { padding-inline: 6px; }
+  .topbar .primary-navigation__dining[aria-current="page"]::after { left: 6px; right: 6px; }
+}
