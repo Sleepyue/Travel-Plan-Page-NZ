@@ -865,7 +865,432 @@
       }
     }
   ],
-  "restaurants": [],
+  "restaurants": [
+    {
+    "id": "rest-xlsx-881ea4a680",
+    "city": "箭镇",
+    "name": "Wolf Coffee Roasters",
+    "cuisine": "咖啡",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-63082f2a5c",
+    "city": "奥克兰",
+    "name": "Auckland Fish Market",
+    "cuisine": "鳌虾、炸鱼海鲜档",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-0f2614a3f4",
+    "city": "奥克兰",
+    "name": "Bivacco, Viaduct Harbour",
+    "cuisine": "提拉米苏",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-5163830d4d",
+    "city": "奥克兰",
+    "name": "Giapo",
+    "cuisine": "gelato",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-fb67b240e7",
+    "city": "奥克兰",
+    "name": "the village fishery",
+    "cuisine": "炸鱼",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-7925caa013",
+    "city": "基督城",
+    "name": "United Fisheries 联合渔业",
+    "cuisine": "鳌虾",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-b08331a288",
+    "city": "基督城",
+    "name": "ChiWahWah?",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-5f3af3ea23",
+    "city": "基督城",
+    "name": "Rollickin Gelato",
+    "cuisine": "gelato",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-8058f726c7",
+    "city": "基督城",
+    "name": "Oceans North Seafood",
+    "cuisine": "鳌虾",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-3f4de5099e",
+    "city": "基督城",
+    "name": "King of Snake",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-75008b5bc0",
+    "city": "基督城",
+    "name": "Farm Shop Cafe",
+    "cuisine": "咖啡",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-1e353ff147",
+    "city": "基督城",
+    "name": "Amazonita",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-c7ec243587",
+    "city": "但尼丁",
+    "name": "the fishwife",
+    "cuisine": "炸鱼&龙虾",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-a3f7a03eff",
+    "city": "但尼丁",
+    "name": "Fresh & Cooked Fish",
+    "cuisine": "炸鱼薯条",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-efbd605c8f",
+    "city": "但尼丁",
+    "name": "Plato Dunedin",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-d764dd37b4",
+    "city": "库克山",
+    "name": "Mt Cook Alpine Salmon",
+    "cuisine": "三文鱼",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-b4292b38ec",
+    "city": "奥马鲁",
+    "name": "Star & Garter Restaurant",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-a6d3bb2ac2",
+    "city": "皇后镇",
+    "name": "CHUR",
+    "cuisine": "炸鱼",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-98742036c8",
+    "city": "皇后镇",
+    "name": "Duck Island",
+    "cuisine": "gelato",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-ce0083c9d3",
+    "city": "皇后镇",
+    "name": "Fergburger大脸汉堡",
+    "cuisine": "汉堡",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-14fcf55fea",
+    "city": "皇后镇",
+    "name": "Pak n save黄超",
+    "cuisine": "鳌虾",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-802d2c4c89",
+    "city": "皇后镇",
+    "name": "RamenRamen",
+    "cuisine": "拉面",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-fa5f55ae8a",
+    "city": "皇后镇",
+    "name": "Atina Gelato",
+    "cuisine": "gelato",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-8b88b4f3f1",
+    "city": "皇后镇",
+    "name": "Patagonia Gelato",
+    "cuisine": "gelato",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-4863cc85d9",
+    "city": "皇后镇",
+    "name": "Saigon Kingdom Vietnamese Restaurant",
+    "cuisine": "越南河粉",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-81dc8757fd",
+    "city": "皇后镇",
+    "name": "Lombardi",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-59b7d21ca5",
+    "city": "皇后镇",
+    "name": "odd saint",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-9b0c4232da",
+    "city": "皇后镇",
+    "name": "Mrs Ferg 69 Beach St",
+    "cuisine": "gelato",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-67acbaf47b",
+    "city": "皇后镇",
+    "name": "Rātā",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-2629879494",
+    "city": "皇后镇",
+    "name": "3 Searle Lane, Menma abura soba noodle",
+    "cuisine": "拉面",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-5ee8517fed",
+    "city": "皇后镇",
+    "name": "MACKENZIE",
+    "cuisine": "咖啡",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-85da44c806",
+    "city": "皇后镇",
+    "name": "Taco's Land",
+    "cuisine": "taco",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-2fbae5e9c0",
+    "city": "特卡波",
+    "name": "Monster Kitchen",
+    "cuisine": "汉堡餐车",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-7c43166e99",
+    "city": "特卡波",
+    "name": "High Country Salmon",
+    "cuisine": "三文鱼",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-a4b1980daa",
+    "city": "特卡波",
+    "name": "The Better Batter",
+    "cuisine": "炸鱼薯条&鱿鱼餐车",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-f169b14d5f",
+    "city": "特卡波",
+    "name": "TLV Restaurant & Bar",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-40688108ed",
+    "city": "特卡波",
+    "name": "Astro cafe",
+    "cuisine": "咖啡",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-fe0a041cf6",
+    "city": "瓦纳卡",
+    "name": "Black Peak Gelato",
+    "cuisine": "gelato",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-80cf0d4a36",
+    "city": "瓦纳卡",
+    "name": "RamenRamen",
+    "cuisine": "拉面",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-9328580508",
+    "city": "瓦纳卡",
+    "name": "Kai Kikokiko - Slow cooked meats ( Best kai wanaka )",
+    "cuisine": "牛肉餐车",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-c62e500fce",
+    "city": "瓦纳卡",
+    "name": "lulu asian market",
+    "cuisine": "黑金鲍",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-b01741f2b0",
+    "city": "瓦纳卡",
+    "name": "Hook Wānaka",
+    "cuisine": "三文鱼",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-a0db19137a",
+    "city": "瓦纳卡",
+    "name": "noods餐车",
+    "cuisine": "餐车",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-bd2719e543",
+    "city": "瓦纳卡",
+    "name": "Firebird",
+    "cuisine": "炸鸡",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-8d9fd4a0e2",
+    "city": "瓦纳卡",
+    "name": "The Catch Wanaka",
+    "cuisine": "炸鱼薯条",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-f55b016309",
+    "city": "瓦纳卡",
+    "name": "The Black Cat Wanaka",
+    "cuisine": "奶茶",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-d715992b34",
+    "city": "瓦纳卡",
+    "name": "Kika",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-c394122570",
+    "city": "瓦纳卡",
+    "name": "Francesac",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-8088dbb400",
+    "city": "瓦纳卡",
+    "name": "Scroggin Coffee and Eatery",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-918815c6d5",
+    "city": "瓦纳卡",
+    "name": "Curbside Coffee & Bagels",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-adba7ec591",
+    "city": "瓦纳卡",
+    "name": "alleyway",
+    "cuisine": "现烤三明治",
+    "note": "小食&海鲜",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-c983436741",
+    "city": "瓦纳卡",
+    "name": "Lamp rump",
+    "cuisine": "餐厅",
+    "note": "正餐",
+    "source": "导入"
+  },
+{
+    "id": "rest-xlsx-379a23f3fe",
+    "city": "奥克兰",
+    "name": "espresso workshop britomart",
+    "cuisine": "咖啡",
+    "note": "咖啡&甜品",
+    "source": "导入"
+  }
+  ],
   "bookingsAndTickets": [],
   "ticketPlanning": {
     "statusStorage": "local",
