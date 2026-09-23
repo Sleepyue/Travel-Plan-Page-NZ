@@ -15,7 +15,7 @@
     "persistence": {
       "mode": "d1",
       "apiBase": "/api/trip",
-      "sharedCollections": ["todos", "tickets", "ledger", "dining"]
+      "sharedCollections": ["todos", "tickets", "itinerary", "ledger", "dining"]
     }
   },
   "metadata": {
@@ -968,49 +968,49 @@
         "id": "pack016",
         "text": "纸巾1包",
         "completed": false,
-        "category": "2.准备类"
+        "category": "车载物品"
       },
       {
         "id": "pack017",
         "text": "湿巾1包",
         "completed": false,
-        "category": "2.准备类"
+        "category": "车载物品"
       },
       {
         "id": "pack018",
         "text": "数据线+转换头",
         "completed": false,
-        "category": "2.准备类"
+        "category": "车载物品"
       },
       {
         "id": "pack019",
         "text": "垃圾袋",
         "completed": false,
-        "category": "2.准备类"
+        "category": "车载物品"
       },
       {
         "id": "pack020",
         "text": "伞",
         "completed": false,
-        "category": "2.准备类"
+        "category": "车载物品"
       },
       {
         "id": "pack021",
         "text": "备用鞋&袜子",
         "completed": false,
-        "category": "2.准备类"
+        "category": "车载物品"
       },
       {
         "id": "pack022",
         "text": "杯子",
         "completed": false,
-        "category": "2.准备类"
+        "category": "车载物品"
       },
       {
         "id": "pack023",
         "text": "手机支架",
         "completed": false,
-        "category": "2.准备类"
+        "category": "车载物品"
       },
       {
         "id": "pack024",

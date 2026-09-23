@@ -5,6 +5,16 @@
 
   const STORAGE_VERSION = 1;
   const SPEND_TYPES = ["早餐", "午餐", "晚餐", "正餐", "咖啡", "甜点", "饮品", "酒吧", "零食", "食材", "外卖", "其他"];
+  /* 消费类型 is a free-text field with suggestions (same pattern as 城市 / 餐饮类型),
+     because the built-in list cannot cover everything. Custom values typed earlier
+     are folded back into the suggestion list so they don't have to be retyped. */
+  const MAX_SPEND_TYPE_LENGTH = 12;
+  function spendTypeSuggestions() {
+    const used = (Array.isArray(data?.records) ? data.records : [])
+      .map((record) => String(record?.spendType || "").trim())
+      .filter((type) => type && !SPEND_TYPES.includes(type));
+    return [...SPEND_TYPES, ...[...new Set(used)].sort((first, second) => first.localeCompare(second, "zh-CN"))];
+  }
   const CUISINE_TYPES = ["日料", "中餐", "西餐", "快餐", "韩餐", "泰餐", "东南亚", "新西兰本地", "咖啡烘焙", "其他"];
   const RATING_OPTIONS = [["0", "未评"], ["1", "★"], ["2", "★★"], ["3", "★★★"], ["4", "★★★★"], ["5", "★★★★★"]];
   const CURRENCIES = [["CNY", "¥"], ["NZD", "NZ$"], ["HKD", "HK$"], ["USD", "$"]];
@@ -113,10 +123,13 @@
     const images = (Array.isArray(raw?.images) ? raw.images : [])
       .filter((image) => typeof image === "string" && image.startsWith("data:image"))
       .slice(0, MAX_IMAGES);
+    /* A custom type is kept as typed — coercing anything unknown to 其他 is what
+       silently discarded the free-text values. */
+    const requestedSpendType = String(raw?.spendType || "").trim().slice(0, MAX_SPEND_TYPE_LENGTH);
     return {
       id: String(raw?.id || "").trim() || makeId("meal"),
       city,
-      spendType: SPEND_TYPES.includes(raw?.spendType) ? raw.spendType : "其他",
+      spendType: requestedSpendType || "其他",
       name,
       cuisine: String(raw?.cuisine || "").trim().slice(0, 20),
       rating: Math.max(0, Math.min(5, Number(raw?.rating) || 0)),
@@ -394,9 +407,7 @@
             </label>
             <label class="ledger-field">
               <span class="ledger-field-label">消费类型</span>
-              <select class="ledger-select" name="spendType">
-                ${SPEND_TYPES.map((type) => `<option value="${escapeAttribute(type)}" ${source.spendType === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
-              </select>
+              <input class="ledger-input" name="spendType" list="dining-spend-type-list" maxlength="${MAX_SPEND_TYPE_LENGTH}" placeholder="正餐" value="${escapeAttribute(source.spendType || "")}">
             </label>
             <label class="ledger-field">
               <span class="ledger-field-label">餐饮类型</span>
@@ -514,7 +525,14 @@
     const totals = totalsByCurrency(records);
     const rated = records.filter((record) => record.rating > 0);
     const averageRating = rated.length ? (rated.reduce((sum, record) => sum + record.rating, 0) / rated.length).toFixed(1) : "—";
-    const groups = SPEND_TYPES.map((type) => ({
+    /* Built-in types keep their canonical order; custom ones trail alphabetically
+       so a newly typed type still gets its own group instead of vanishing. */
+    const present = [...new Set(records.map((record) => String(record.spendType || "").trim()).filter(Boolean))];
+    const orderedTypes = [
+      ...SPEND_TYPES.filter((type) => present.includes(type)),
+      ...present.filter((type) => !SPEND_TYPES.includes(type)).sort((first, second) => first.localeCompare(second, "zh-CN"))
+    ];
+    const groups = orderedTypes.map((type) => ({
       type,
       records: records.filter((record) => record.spendType === type)
         .sort((first, second) => String(second.occurredAt).localeCompare(String(first.occurredAt)))
@@ -573,6 +591,7 @@
         <div class="ledger-live" role="status" aria-live="polite">${escapeHtml(notice)}</div>
         <datalist id="dining-city-list">${cityOptions().map((city) => `<option value="${escapeAttribute(city)}"></option>`).join("")}</datalist>
         <datalist id="dining-cuisine-list">${CUISINE_TYPES.map((cuisine) => `<option value="${escapeAttribute(cuisine)}"></option>`).join("")}</datalist>
+        <datalist id="dining-spend-type-list">${spendTypeSuggestions().map((type) => `<option value="${escapeAttribute(type)}"></option>`).join("")}</datalist>
         <datalist id="dining-restaurant-list">${data.restaurants.map((restaurant) => `<option value="${escapeAttribute(restaurant.name)}"></option>`).join("")}</datalist>
         ${renderRestaurantsPanel()}
         ${renderRecordPanel()}

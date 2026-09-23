@@ -56,7 +56,7 @@
     if (skipLink) skipLink.href = skipTargets[nextView] || "#main";
 
     if (nextView === "ledger") {
-      const tab = location.hash === "#ledger-stats" ? "stats" : location.hash === "#ledger" ? "entry" : "";
+      const tab = location.hash.match(/^#ledger-([a-z]+)$/)?.[1] || (location.hash === "#ledger" ? "entry" : "");
       if (tab) window.TravelLedger?.setActiveTab?.(tab, { updateHash: false });
     }
     if (nextView === "dining") {
@@ -148,7 +148,8 @@
       routeFromLocation({ forceScroll: false });
     });
     window.addEventListener("travel-ledger:navigate", (event) => {
-      const hash = event.detail?.tab === "stats" ? "#ledger-stats" : "#ledger";
+      const tab = event.detail?.tab === "stats" || event.detail?.tab === "detail" ? event.detail.tab : "entry";
+      const hash = tab === "entry" ? "#ledger" : `#ledger-${tab}`;
       if (location.hash !== hash) history.pushState({ view: "ledger" }, "", hash);
     });
   }

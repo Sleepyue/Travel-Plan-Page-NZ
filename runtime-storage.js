@@ -8,6 +8,7 @@
     "travelers",
     "todos",
     "tickets",
+    "itinerary",
     "diningRestaurants",
     "diningRecords"
   ]);
@@ -26,6 +27,7 @@
       travelers: [],
       todos: [],
       tickets: [],
+      itinerary: [],
       diningRestaurants: [],
       diningRecords: [],
       updatedAt: new Date().toISOString()
@@ -45,6 +47,7 @@
       travelers: Array.isArray(raw.travelers) ? deepClone(raw.travelers) : [],
       todos: Array.isArray(raw.todos) ? deepClone(raw.todos) : [],
       tickets: Array.isArray(raw.tickets) ? deepClone(raw.tickets) : [],
+      itinerary: Array.isArray(raw.itinerary) ? deepClone(raw.itinerary) : [],
       diningRestaurants: Array.isArray(raw.diningRestaurants) ? deepClone(raw.diningRestaurants) : [],
       diningRecords: Array.isArray(raw.diningRecords) ? deepClone(raw.diningRecords) : [],
       updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : fallback.updatedAt

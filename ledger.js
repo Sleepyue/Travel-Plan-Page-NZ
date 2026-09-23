@@ -142,6 +142,9 @@
   let ledgerData = null;
   let initialized = false;
   let activeTab = "entry";
+  /* 消费明细 has two readings of "what each person spent": what they actually
+     fronted (paid) versus their fair share after splitting (owed). */
+  let detailMetric = "paid";
   let editingBillId = null;
   let openDialogName = null;
   let currencyPickerMode = "common";
@@ -1000,6 +1003,302 @@
       </section>`;
   }
 
+  /* ---------- 消费明细 (spending detail) ----------
+     Two questions the settlement page does not answer: where the money went by
+     type, and how each person's spending splits across those types. The charts
+     are hand-rolled inline SVG — no chart library, nothing fetched at runtime,
+     and they inherit the page's type colours. */
+
+  const CATEGORY_COLORS = Object.freeze({
+    "餐饮": "#b65c3a", "交通": "#287b90", "住宿": "#516b55",
+    "门票": "#c58b32", "购物": "#8b6aa8", "其他": "#8a9798"
+  });
+
+  function categoryColor(category) {
+    return CATEGORY_COLORS[category] || "#68798e";
+  }
+
+  /* 餐饮/交通/… keep their canonical order; a category typed by hand trails after. */
+  function categoryOrder() {
+    const present = new Set(ledgerData.bills.map((bill) => bill.category));
+    return [
+      ...CATEGORIES.filter((category) => present.has(category)),
+      ...[...present].filter((category) => !CATEGORIES.includes(category))
+    ];
+  }
+
+  function calculateBreakdown() {
+    const categories = new Map();
+    const members = ledgerData.travelers.map((traveler) => ({
+      traveler,
+      paidCents: 0,
+      owedCents: 0,
+      paidByCategory: new Map(),
+      owedByCategory: new Map()
+    }));
+    const byId = new Map(members.map((member) => [member.traveler.id, member]));
+    for (const bill of ledgerData.bills) {
+      const category = categories.get(bill.category) || { category: bill.category, totalCents: 0, billCount: 0 };
+      category.totalCents += bill.baseAmountCents;
+      category.billCount += 1;
+      categories.set(bill.category, category);
+
+      const payer = byId.get(bill.payerId);
+      if (payer) {
+        payer.paidCents += bill.baseAmountCents;
+        payer.paidByCategory.set(bill.category, (payer.paidByCategory.get(bill.category) || 0) + bill.baseAmountCents);
+      }
+      billShares(bill).forEach((amount, participantId) => {
+        const member = byId.get(participantId);
+        if (!member) return;
+        member.owedCents += amount;
+        member.owedByCategory.set(bill.category, (member.owedByCategory.get(bill.category) || 0) + amount);
+      });
+    }
+    return { categories, members };
+  }
+
+  /* Axis labels only get ~60px, so 12,345.67 would be unreadable. */
+  function compactMoney(cents) {
+    let symbol = "";
+    try {
+      symbol = formatMoney(0, ledgerData.settings.baseCurrency).replace(/[\d.,\s\u00a0]/g, "");
+    } catch {
+      symbol = "";
+    }
+    const amount = Number(cents || 0) / 100;
+    const magnitude = Math.abs(amount);
+    if (magnitude >= 10000) return `${symbol}${(amount / 10000).toFixed(magnitude >= 100000 ? 0 : 1)}万`;
+    if (magnitude >= 1000) return `${symbol}${(amount / 1000).toFixed(1)}k`;
+    return `${symbol}${Math.round(amount)}`;
+  }
+
+  /* One tidy gridline step, aiming for ~4 intervals across the axis. */
+  function niceStep(maxValue, intervals = 4) {
+    const rough = Math.max(1, maxValue) / intervals;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(rough)));
+    const normalized = rough / magnitude;
+    const nice = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+    return nice * magnitude;
+  }
+
+  /* Vertical grouped bars. group.values maps a series key to cents. A single-series
+     chart colours each bar by group.color (the category colour); multi-series charts
+     colour by series (the traveller's avatar colour). */
+  function renderBarChart(groups, series, ariaLabel) {
+    if (!groups.length || !series.length) return "";
+    const width = 640;
+    const padLeft = 68;
+    const padRight = 12;
+    const padTop = 18;
+    const plotHeight = 170;
+    const padBottom = 50;
+    const plotWidth = width - padLeft - padRight;
+    const plotBottom = padTop + plotHeight;
+    const height = plotBottom + padBottom;
+    const flat = groups.flatMap((group) => series.map((entry) => Number(group.values?.[entry.key] || 0)));
+    const peak = Math.max(1, ...flat);
+    const step = niceStep(peak);
+    const axisMax = Math.max(step, Math.ceil(peak / step) * step);
+    const slot = plotWidth / groups.length;
+    const barWidth = Math.max(6, Math.min(34, (slot * 0.7) / series.length));
+    const span = barWidth * series.length + (series.length - 1) * 4;
+    const yFor = (value) => plotBottom - (Number(value || 0) / axisMax) * plotHeight;
+
+    const gridlines = [];
+    for (let value = 0; value <= axisMax + step / 2; value += step) {
+      const y = yFor(value);
+      gridlines.push(`<line x1="${padLeft}" y1="${y.toFixed(1)}" x2="${width - padRight}" y2="${y.toFixed(1)}" stroke="#e4eae7" stroke-width="1"/>`);
+      gridlines.push(`<text x="${padLeft - 8}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="#66757a">${escapeHtml(compactMoney(value))}</text>`);
+    }
+
+    const bars = groups.map((group, groupIndex) => {
+      const groupLeft = padLeft + slot * groupIndex + (slot - span) / 2;
+      const rects = series.map((entry, seriesIndex) => {
+        const value = Number(group.values?.[entry.key] || 0);
+        const x = groupLeft + seriesIndex * (barWidth + 4);
+        const top = yFor(value);
+        const barHeight = value > 0 ? Math.max(2, plotBottom - top) : 0;
+        const fill = series.length === 1 && group.color ? group.color : entry.color;
+        const tip = `${group.label} · ${entry.label}：${formatMoney(value, ledgerData.settings.baseCurrency)}`;
+        return `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" rx="3" fill="${escapeAttribute(fill)}"><title>${escapeHtml(tip)}</title></rect>`;
+      }).join("");
+      const centerX = (padLeft + slot * groupIndex + slot / 2).toFixed(1);
+      const total = series.length === 1
+        ? `<text x="${centerX}" y="${plotBottom + 34}" text-anchor="middle" font-size="10" fill="#66757a">${escapeHtml(compactMoney(Number(group.values?.[series[0].key] || 0)))}</text>`
+        : "";
+      return `${rects}<text x="${centerX}" y="${plotBottom + 18}" text-anchor="middle" font-size="11" fill="#13262f">${escapeHtml(group.label)}</text>${total}`;
+    }).join("");
+
+    return `<svg class="ledger-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeAttribute(ariaLabel)}" preserveAspectRatio="xMidYMid meet">
+      ${gridlines.join("")}
+      ${bars}
+      <line x1="${padLeft}" y1="${plotBottom}" x2="${width - padRight}" y2="${plotBottom}" stroke="#b8c5c2" stroke-width="1"/>
+    </svg>`;
+  }
+
+  /* Donut chart. A lone slice is drawn as two 180° arcs because a single 360° arc
+     collapses to a zero-length path and renders nothing. */
+  function renderPieChart(slices, ariaLabel) {
+    const usable = slices.filter((slice) => slice.value > 0);
+    const total = usable.reduce((sum, slice) => sum + slice.value, 0);
+    if (!total) return "";
+    const size = 200;
+    const center = size / 2;
+    const outer = 86;
+    const inner = 54;
+    const point = (radius, angle) => [
+      (center + radius * Math.cos(angle)).toFixed(2),
+      (center + radius * Math.sin(angle)).toFixed(2)
+    ];
+    const arc = (from, to, radius, sweepFlag) => {
+      const [x1, y1] = point(radius, from);
+      const [x2, y2] = point(radius, to);
+      const large = Math.abs(to - from) > Math.PI ? 1 : 0;
+      return `A ${radius} ${radius} 0 ${large} ${sweepFlag} ${x2} ${y2}`;
+    };
+
+    let angle = -Math.PI / 2;
+    const paths = usable.map((slice) => {
+      const sweep = (slice.value / total) * Math.PI * 2;
+      const share = `${((slice.value / total) * 100).toFixed(1)}%`;
+      const tip = `${slice.label}：${formatMoney(slice.value, ledgerData.settings.baseCurrency)}（${share}）`;
+      let path;
+      if (sweep >= Math.PI * 2 - 1e-6) {
+        path = `M ${point(outer, -Math.PI / 2).join(" ")} ${arc(-Math.PI / 2, Math.PI / 2, outer, 1)} ${arc(Math.PI / 2, Math.PI * 1.5, outer, 1)} Z `
+          + `M ${point(inner, -Math.PI / 2).join(" ")} ${arc(-Math.PI / 2, Math.PI / 2, inner, 1)} ${arc(Math.PI / 2, Math.PI * 1.5, inner, 1)} Z`;
+      } else {
+        const start = angle;
+        const end = angle + sweep;
+        path = `M ${point(outer, start).join(" ")} ${arc(start, end, outer, 1)} L ${point(inner, end).join(" ")} ${arc(end, start, inner, 0)} Z`;
+        angle = end;
+      }
+      return `<path d="${path}" fill="${escapeAttribute(slice.color)}" fill-rule="evenodd" stroke="#ffffff" stroke-width="1.5"><title>${escapeHtml(tip)}</title></path>`;
+    }).join("");
+
+    return `<svg class="ledger-chart ledger-chart--pie" viewBox="0 0 ${size} ${size}" role="img" aria-label="${escapeAttribute(ariaLabel)}" preserveAspectRatio="xMidYMid meet">${paths}</svg>`;
+  }
+
+  function renderDetailPage() {
+    const breakdown = calculateBreakdown();
+    const baseCurrency = ledgerData.settings.baseCurrency;
+    const order = categoryOrder();
+    const totalCents = [...breakdown.categories.values()].reduce((sum, entry) => sum + entry.totalCents, 0);
+    const hasBills = totalCents > 0;
+
+    const categoryGroups = order.map((category) => ({
+      label: category,
+      color: categoryColor(category),
+      values: { total: breakdown.categories.get(category)?.totalCents || 0 }
+    }));
+    const slices = order.map((category) => ({
+      label: category,
+      value: breakdown.categories.get(category)?.totalCents || 0,
+      color: categoryColor(category)
+    })).filter((slice) => slice.value > 0);
+
+    const metric = detailMetric === "owed" ? "owed" : "paid";
+    const metricLabel = metric === "paid" ? "实际垫付" : "个人应分摊";
+    const members = breakdown.members;
+    const series = members.map((member) => ({
+      key: member.traveler.id,
+      label: member.traveler.name,
+      color: member.traveler.color
+    }));
+    const memberGroups = order.map((category) => ({
+      label: category,
+      values: Object.fromEntries(members.map((member) => [
+        member.traveler.id,
+        ((metric === "paid" ? member.paidByCategory : member.owedByCategory).get(category)) || 0
+      ]))
+    })).filter((group) => Object.values(group.values).some((value) => value > 0));
+
+    const legend = slices.map((slice) => `
+      <li class="ledger-detail-legend__row">
+        <span class="ledger-detail-legend__dot" style="--ledger-detail-color:${escapeAttribute(slice.color)}"></span>
+        <span class="ledger-detail-legend__label">${escapeHtml(slice.label)}</span>
+        <span class="ledger-detail-legend__share">${((slice.value / totalCents) * 100).toFixed(1)}%</span>
+        <strong class="ledger-detail-legend__value">${escapeHtml(formatMoney(slice.value, baseCurrency))}</strong>
+      </li>`).join("");
+
+    const memberTotals = members.length ? `
+      <div class="ledger-detail-members">
+        ${members.map((member) => {
+          const cents = metric === "paid" ? member.paidCents : member.owedCents;
+          const share = metric === "paid" && totalCents ? (cents / totalCents) * 100 : null;
+          return `
+            <div class="ledger-detail-member">
+              ${renderAvatar(member.traveler)}
+              <div>
+                <strong>${escapeHtml(member.traveler.name)}</strong>
+                <small>${escapeHtml(metricLabel)}${share === null ? "" : ` · 占总支出 ${share.toFixed(1)}%`}</small>
+              </div>
+              <strong class="ledger-detail-member__value">${escapeHtml(formatMoney(cents, baseCurrency))}</strong>
+            </div>`;
+        }).join("")}
+      </div>` : "";
+
+    const noMembers = members.length ? "" : `<p class="ledger-detail-hint">先在「记账」里添加同行人并勾选参与分账，这里才会出现个人维度的对比。</p>`;
+
+    return `
+      <section class="ledger-tab-panel" data-ledger-panel="detail" role="tabpanel" aria-labelledby="ledger-detail-tab" ${activeTab === "detail" ? "" : "hidden"}>
+        <section class="ledger-stats-overview" aria-labelledby="ledger-detail-title">
+          <p class="ledger-section-kicker">消费明细</p>
+          <h2 id="ledger-detail-title">${escapeHtml(formatMoney(totalCents, baseCurrency))}</h2>
+          <span>${ledgerData.bills.length} 笔账单 · ${slices.length} 个消费类型 · 以 ${escapeHtml(baseCurrency)} 结算</span>
+        </section>
+
+        <section class="ledger-settlement-section" aria-labelledby="ledger-category-chart-title">
+          <div class="ledger-section-heading">
+            <div>
+              <p class="ledger-section-kicker">消费类型</p>
+              <h2 id="ledger-category-chart-title">各类型消费金额</h2>
+            </div>
+            <span class="ledger-soft-count">${slices.length} 类</span>
+          </div>
+          ${hasBills
+            ? renderBarChart(categoryGroups, [{ key: "total", label: "消费金额", color: "#287b90" }], "各消费类型的消费金额柱状图")
+            : `<div class="ledger-empty-state"><p>添加账单后，这里会按消费类型显示金额。</p></div>`}
+        </section>
+
+        <section class="ledger-settlement-section" aria-labelledby="ledger-category-pie-title">
+          <div class="ledger-section-heading">
+            <div>
+              <p class="ledger-section-kicker">消费类型</p>
+              <h2 id="ledger-category-pie-title">各类型消费占比</h2>
+            </div>
+            <span class="ledger-soft-count">100%</span>
+          </div>
+          ${hasBills ? `
+            <div class="ledger-detail-pie">
+              ${renderPieChart(slices, "各消费类型的消费占比饼图")}
+              <ul class="ledger-detail-legend">${legend}</ul>
+            </div>` : `<div class="ledger-empty-state"><p>添加账单后，这里会显示各类型的占比。</p></div>`}
+        </section>
+
+        <section class="ledger-settlement-section" aria-labelledby="ledger-member-chart-title">
+          <div class="ledger-section-heading">
+            <div>
+              <p class="ledger-section-kicker">个人开支</p>
+              <h2 id="ledger-member-chart-title">每个人的各类型金额</h2>
+            </div>
+          </div>
+          <div class="ledger-detail-toggle" role="group" aria-label="个人开支口径">
+            <button type="button" class="ledger-detail-toggle__button" data-ledger-action="set-detail-metric" data-ledger-metric="paid" aria-pressed="${metric === "paid"}">实际垫付</button>
+            <button type="button" class="ledger-detail-toggle__button" data-ledger-action="set-detail-metric" data-ledger-metric="owed" aria-pressed="${metric === "owed"}">个人应分摊</button>
+          </div>
+          <p class="ledger-detail-note">${metric === "paid"
+            ? "按谁掏的这笔钱归类，和「账单结算」里的实际支付一致。"
+            : "按分账比例摊到每个人头上的钱，和「账单结算」里的个人应分摊一致。"}</p>
+          ${noMembers}
+          ${hasBills && members.length
+            ? renderBarChart(memberGroups, series, `每个人按${metricLabel}统计的各消费类型金额柱状图`)
+            : ""}
+          ${hasBills && members.length ? memberTotals : ""}
+        </section>
+      </section>`;
+  }
+
   function renderMemberEditRow(traveler) {
     if (editingMemberId === traveler.id) {
       return `
@@ -1173,10 +1472,12 @@
         <nav class="ledger-tabs" role="tablist" aria-label="记账页面">
           <button id="ledger-entry-tab" class="ledger-tab ${activeTab === "entry" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "entry"}" data-ledger-action="set-tab" data-ledger-tab="entry">记账</button>
           <button id="ledger-stats-tab" class="ledger-tab ${activeTab === "stats" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "stats"}" data-ledger-action="set-tab" data-ledger-tab="stats">账单结算</button>
+          <button id="ledger-detail-tab" class="ledger-tab ${activeTab === "detail" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "detail"}" data-ledger-action="set-tab" data-ledger-tab="detail">消费明细</button>
         </nav>
         <div class="ledger-live" role="status" aria-live="polite">${escapeHtml(notice)}</div>
         ${renderEntryPage()}
         ${renderStatsPage()}
+        ${renderDetailPage()}
         ${renderMembersDialog()}
         ${renderSettingsDialog()}
         ${renderCurrencyDialog()}
@@ -1709,6 +2010,12 @@
     if (action === "set-tab") {
       captureBillDraft();
       setActiveTab(button.dataset.ledgerTab);
+    } else if (action === "set-detail-metric") {
+      const metric = button.dataset.ledgerMetric === "owed" ? "owed" : "paid";
+      if (metric !== detailMetric) {
+        detailMetric = metric;
+        renderApp();
+      }
     } else if (action === "open-members") {
       captureBillDraft();
       showDialog("members");
@@ -1818,13 +2125,23 @@
     }
     if (!event.target.matches('[role="tab"]') || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
     event.preventDefault();
-    const nextTab = event.target.dataset.ledgerTab === "entry" ? "stats" : "entry";
+    const current = LEDGER_TABS.indexOf(event.target.dataset.ledgerTab);
+    if (current < 0) return;
+    const offset = event.key === "ArrowRight" ? 1 : LEDGER_TABS.length - 1;
+    const nextTab = LEDGER_TABS[(current + offset) % LEDGER_TABS.length];
     setActiveTab(nextTab);
     requestAnimationFrame(() => ledgerRoot.querySelector(`[data-ledger-tab="${nextTab}"]`)?.focus());
   }
 
+  const LEDGER_TABS = Object.freeze(["entry", "stats", "detail"]);
+
+  function tabForHash(hash) {
+    const match = String(hash || "").match(/^#ledger-([a-z]+)$/);
+    return match && LEDGER_TABS.includes(match[1]) ? match[1] : "entry";
+  }
+
   function setActiveTab(tab, options = {}) {
-    const nextTab = tab === "stats" ? "stats" : "entry";
+    const nextTab = LEDGER_TABS.includes(tab) ? tab : "entry";
     if (editingNoteBillId && !options.skipNoteFlush) {
       void flushActiveBillNote().then((saved) => {
         if (saved) setActiveTab(nextTab, { ...options, skipNoteFlush: true });
@@ -1871,7 +2188,7 @@
         : "本地账本暂时无法读取，已打开一份空账本。";
     }
     ledgerData = normalizeData(stored);
-    activeTab = location.hash === "#ledger-stats" ? "stats" : "entry";
+    activeTab = tabForHash(location.hash);
     ledgerRoot.addEventListener("click", handleRootClick);
     ledgerRoot.addEventListener("input", handleRootInput);
     ledgerRoot.addEventListener("change", handleRootChange);

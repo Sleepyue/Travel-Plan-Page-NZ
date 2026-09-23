@@ -3,16 +3,26 @@ const state = {
   config: null,
   runtimeAdapters: {},
   expandedDay: null,
+  timelineRendered: false,
+  editingScheduleId: null,
   countdownTimer: null,
   purchasedTickets: new Set(),
   todos: [],
   todoFilter: "all",
+  prepNameListenerBound: false,
+  /* Shared itinerary edits, one record per `${day}::${itemId}`. Authored
+     days[].schedule in trip-data.json stays the baseline; these overlay it. */
+  itinerary: [],
   focusTarget: null,
   focusFinished: false
 };
 
 const MODULE_NAMES = Object.freeze(["flights", "overview", "itinerary", "todo", "driving", "ledger"]);
-const SHARED_COLLECTIONS = Object.freeze(["todos", "tickets", "ledger", "dining"]);
+/* Note the mixed granularity: "todos"/"tickets"/"itinerary" name real record collections,
+   while "ledger"/"dining" name whole modules whose tables ledger.js and dining.js own.
+   The allowlist is validated verbatim against trip-data.json, so entries have to match
+   exactly what that file declares. */
+const SHARED_COLLECTIONS = Object.freeze(["todos", "tickets", "itinerary", "ledger", "dining"]);
 
 function normalizeTripConfig(raw = {}) {
   if (!raw || typeof raw !== "object" || raw.schemaVersion !== "1.0.0") throw new Error("trip-data.json config.schemaVersion must be 1.0.0");
@@ -57,7 +67,8 @@ function applyModuleConfig() {
 
   const hashModules = {
     "#flights": "flights", "#route": "overview", "#itinerary": "itinerary",
-    "#drive": "driving", "#prep": "todo", "#ledger": "ledger", "#ledger-stats": "ledger"
+    "#drive": "driving", "#prep": "todo", "#ledger": "ledger",
+    "#ledger-stats": "ledger", "#ledger-detail": "ledger"
   };
   const requestedModule = hashModules[location.hash];
   if (requestedModule && !moduleEnabled(requestedModule)) {
@@ -130,9 +141,12 @@ function dayUtcOffset(day) {
 function nextScheduleItem() {
   const now = Date.now();
   const candidates = [];
-  for (const day of state.data.days || []) {
+  /* Reads the merged itinerary so edits show up here too, and skips items already
+     ticked off — otherwise 「行程提醒」 kept pointing at something just completed. */
+  for (const day of itineraryDays()) {
     const offset = dayUtcOffset(day);
     for (const item of day.schedule || []) {
+      if (item.completed) continue;
       const clock = String(item.time || "").match(/(\d{1,2}):(\d{2})/);
       if (!clock) continue;
       const target = new Date(`${day.date}T${clock[1].padStart(2, "0")}:${clock[2]}:00${offset}`);
@@ -522,33 +536,224 @@ function inlineTicketMarkup(ticket) {
     </div>`;
 }
 
+/* ---------- shared itinerary ----------
+   Every edit lands as ONE record keyed by `${day}::${itemId}`, never as a whole
+   rewritten `days` array — that is what lets two people change different items
+   at the same time without clobbering each other. `deleted: true` acts as a
+   tombstone that suppresses the authored copy from trip-data.json; an item that
+   only ever existed in the shared layer is removed by dropping its row instead. */
+
+const ITINERARY_SEPARATOR = "::";
+const SCHEDULE_TYPES = Object.freeze([
+  ["attraction", "景点"], ["restaurant", "餐饮"], ["drive", "自驾"], ["hike", "徒步"],
+  ["check-in", "入住"], ["check-out", "退房"], ["flight", "航班"], ["transfer", "交通"], ["note", "备忘"]
+]);
+const SCHEDULE_TYPE_LABELS = Object.freeze(Object.fromEntries(SCHEDULE_TYPES));
+
+function itineraryRecordId(day, itemId) {
+  return `${Number(day)}${ITINERARY_SEPARATOR}${String(itemId || "").trim()}`;
+}
+
+function normalizeItineraryRecord(raw) {
+  const day = Number(raw?.day);
+  const itemId = String(raw?.itemId || "").trim();
+  if (!Number.isSafeInteger(day) || day < 1 || !itemId) return null;
+  return {
+    id: itineraryRecordId(day, itemId),
+    day,
+    itemId,
+    time: String(raw?.time || "").trim().slice(0, 16),
+    text: String(raw?.text || "").trim().slice(0, 200),
+    type: String(raw?.type || "note").trim().slice(0, 24),
+    completed: Boolean(raw?.completed),
+    deleted: Boolean(raw?.deleted)
+  };
+}
+
+/* trip-data.json leaves 20 schedule entries without an id, so derive a stable one
+   from the position in the AUTHORED array. Deriving it from the merged array would
+   make the key shift the moment anything is added. */
+function authoredScheduleItemId(item, index) {
+  return String(item?.id || "").trim() || `auto-${index + 1}`;
+}
+
+function itineraryRecordMap() {
+  const map = new Map();
+  for (const raw of state.itinerary || []) {
+    const record = normalizeItineraryRecord(raw);
+    if (record) map.set(record.id, record);
+  }
+  return map;
+}
+
+/* Merge the authored baseline with the shared overlay into the days the UI renders. */
+function itineraryDays() {
+  const source = state.data?.days || [];
+  if (!source.length) return [];
+  const records = itineraryRecordMap();
+  return source.map((day) => {
+    const items = [];
+    const authoredIds = new Set();
+    (day.schedule || []).forEach((item, index) => {
+      const itemId = authoredScheduleItemId(item, index);
+      authoredIds.add(itemId);
+      const record = records.get(itineraryRecordId(day.day, itemId));
+      if (record?.deleted) return;
+      items.push({
+        ...item,
+        id: itemId,
+        itemId,
+        time: record ? record.time : String(item.time || ""),
+        text: record ? record.text : String(item.text || ""),
+        type: record ? record.type : String(item.type || "note"),
+        completed: Boolean(record?.completed),
+        isAdded: false
+      });
+    });
+    const additions = [...records.values()]
+      .filter((record) => record.day === day.day && !authoredIds.has(record.itemId) && !record.deleted && record.text)
+      .sort((first, second) => String(first.time).localeCompare(String(second.time)) || first.itemId.localeCompare(second.itemId));
+    for (const record of additions) {
+      /* Slot new items in where the clock says they belong rather than dumping them
+         at the bottom — adding a 09:00 stop to a day that starts at 11:00 otherwise
+         showed up last and read as broken. */
+      const time = String(record.time || "");
+      const index = items.findIndex((existing) => String(existing.time || "").localeCompare(time) > 0);
+      const entry = { id: record.itemId, itemId: record.itemId, time, text: record.text, type: record.type, completed: record.completed, isAdded: true };
+      if (index < 0) items.push(entry);
+      else items.splice(index, 0, entry);
+    }
+    return { ...day, schedule: items };
+  });
+}
+
+function findItineraryEntry(day, itemId) {
+  const target = itineraryDays().find((entry) => entry.day === Number(day));
+  return target?.schedule.find((item) => item.itemId === itemId) || null;
+}
+
+/* Update local state first so the UI re-renders immediately; the shared write is
+   fire-and-forget, matching how the pre-trip list persists. */
+function saveItineraryRecord(day, itemId, patch) {
+  const record = normalizeItineraryRecord({ day, itemId, ...patch });
+  if (!record) return Promise.resolve(null);
+  const index = state.itinerary.findIndex((item) => itineraryRecordId(item.day, item.itemId) === record.id);
+  if (index >= 0) state.itinerary[index] = record;
+  else state.itinerary.push(record);
+  const adapter = state.runtimeAdapters.itinerary;
+  if (!adapter) return Promise.resolve(record);
+  return adapter.applyChange("itinerary", record, "upsert")
+    .then(() => record)
+    .catch((error) => {
+      console.error("行程修改没有同步到共享层。", error);
+      return record;
+    });
+}
+
+function removeItineraryEntry(day, itemId, isAdded) {
+  const id = itineraryRecordId(day, itemId);
+  const adapter = state.runtimeAdapters.itinerary;
+  if (isAdded) {
+    /* Never existed in trip-data.json, so dropping the row is enough. */
+    state.itinerary = state.itinerary.filter((item) => itineraryRecordId(item.day, item.itemId) !== id);
+    if (adapter) adapter.applyChange("itinerary", { id }, "delete").catch((error) => console.error("行程删除没有同步到共享层。", error));
+    return;
+  }
+  /* Authored item: keep a tombstone, otherwise the next reload resurrects it. */
+  const entry = findItineraryEntry(day, itemId);
+  saveItineraryRecord(day, itemId, {
+    time: entry?.time || "",
+    text: entry?.text || "",
+    type: entry?.type || "note",
+    completed: Boolean(entry?.completed),
+    deleted: true
+  });
+}
+
+function scheduleEditorMarkup(day, item) {
+  return `
+    <form class="schedule-editor" data-schedule-form="edit" data-schedule-day="${day.day}" data-schedule-completed="${item.completed ? "1" : "0"}">
+      <div class="schedule-editor__grid">
+        <label><span>时间</span><input type="time" name="time" value="${escapeHtml(item.time || "")}" required></label>
+        <label><span>类型</span>
+          <select name="type">${SCHEDULE_TYPES.map(([value, label]) => `<option value="${value}" ${item.type === value ? "selected" : ""}>${label}</option>`).join("")}</select>
+        </label>
+      </div>
+      <label><span>内容</span><input type="text" name="text" maxlength="200" value="${escapeHtml(item.text)}" required></label>
+      <div class="schedule-editor__actions">
+        <button type="submit">保存</button>
+        <button type="button" class="schedule-editor__cancel" data-schedule-cancel>取消</button>
+      </div>
+    </form>`;
+}
+
+function scheduleItemMarkup(day, item) {
+  const recordId = itineraryRecordId(day.day, item.itemId);
+  const timeLabel = escapeHtml(item.time || "—");
+  if (state.editingScheduleId === recordId) {
+    return `
+      <li class="schedule-item is-editing" data-schedule-id="${escapeHtml(recordId)}" data-schedule-day="${day.day}" data-schedule-item="${escapeHtml(item.itemId)}">
+        <span class="schedule-time">${timeLabel}</span>
+        <div class="schedule-content">${scheduleEditorMarkup(day, item)}</div>
+      </li>`;
+  }
+  const mapLinks = navigationDestinations(item).map((destination) => `
+    <button type="button" class="schedule-map-link" data-map-query="${escapeHtml(destination.query)}" data-map-url="${escapeHtml(destination.url || "")}" data-map-label="${escapeHtml(destination.label)}" aria-haspopup="dialog" aria-controls="place-map" aria-label="查看 ${escapeHtml(destination.label)} 的地图">📍 ${escapeHtml(destination.label)}</button>
+  `).join("");
+  const scheduleTickets = ticketsForSchedule(day, item).map(inlineTicketMarkup).join("");
+  const typeLabel = SCHEDULE_TYPE_LABELS[item.type] || "";
+  return `
+    <li class="schedule-item${item.completed ? " is-done" : ""}${item.isAdded ? " is-added" : ""}" data-schedule-id="${escapeHtml(recordId)}" data-schedule-day="${day.day}" data-schedule-item="${escapeHtml(item.itemId)}">
+      <span class="schedule-time">${timeLabel}</span>
+      <div class="schedule-content">
+        <div class="schedule-text">${escapeHtml(item.text)}${typeLabel ? `<span class="schedule-type">${escapeHtml(typeLabel)}</span>` : ""}${item.isAdded ? `<span class="schedule-type schedule-type--added">新增</span>` : ""}</div>
+        ${scheduleTickets}
+        ${mapLinks ? `<div class="schedule-map-links">${mapLinks}</div>` : ""}
+        <div class="schedule-actions">
+          <label class="schedule-done">
+            <input type="checkbox" data-schedule-complete ${item.completed ? "checked" : ""} aria-label="${item.completed ? "取消完成" : "标记完成"}：${escapeHtml(item.text)}">
+            <span class="schedule-done__label">${item.completed ? "已完成" : "标记完成"}</span>
+          </label>
+          <button type="button" class="schedule-action" data-schedule-edit aria-label="编辑：${escapeHtml(item.text)}">编辑</button>
+          <button type="button" class="schedule-action schedule-action--danger" data-schedule-remove aria-label="删除：${escapeHtml(item.text)}">删除</button>
+        </div>
+      </div>
+    </li>`;
+}
+
+function dayAddFormMarkup(day) {
+  const done = day.schedule.filter((item) => item.completed).length;
+  return `
+    <form class="schedule-add" data-schedule-form="add" data-schedule-day="${day.day}">
+      <div class="schedule-add__grid">
+        <label><span>时间</span><input type="time" name="time" required></label>
+        <label><span>类型</span>
+          <select name="type">${SCHEDULE_TYPES.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
+        </label>
+      </div>
+      <label><span>内容</span><input type="text" name="text" maxlength="200" placeholder="例如：18:30 米佛峡湾游船" required></label>
+      <div class="schedule-add__actions">
+        <span class="schedule-add__progress">已完成 ${done} / ${day.schedule.length}</span>
+        <button type="submit">＋ 新增行程</button>
+      </div>
+    </form>`;
+}
+
 function dayCard(day) {
   const today = todayForTrip();
   const isToday = day.date === today;
   const expanded = state.expandedDay === day.day;
-  const schedule = day.schedule.map((item) => {
-    const destinations = navigationDestinations(item);
-    const mapLinks = destinations.map((destination) => `
-      <button type="button" class="schedule-map-link" data-map-query="${escapeHtml(destination.query)}" data-map-url="${escapeHtml(destination.url || "")}" data-map-label="${escapeHtml(destination.label)}" aria-haspopup="dialog" aria-controls="place-map" aria-label="查看 ${escapeHtml(destination.label)} 的地图">📍 ${escapeHtml(destination.label)}</button>
-    `).join("");
-    const scheduleTickets = ticketsForSchedule(day, item).map(inlineTicketMarkup).join("");
-    return `
-      <li class="schedule-item">
-        <span class="schedule-time">${escapeHtml(item.time)}</span>
-        <div class="schedule-content">
-          <div class="schedule-text">${escapeHtml(item.text)}</div>
-          ${scheduleTickets}
-          ${mapLinks ? `<div class="schedule-map-links">${mapLinks}</div>` : ""}
-        </div>
-      </li>
-    `;
-  }).join("");
+  const schedule = day.schedule.map((item) => scheduleItemMarkup(day, item)).join("");
   const notes = [...(day.notes || []), ...(day.sourceDateLabelConflict ? [day.sourceDateLabelConflict] : [])];
   const costs = (day.costReferences || []).map((cost) => `<span class="cost-tag">${escapeHtml(costText(cost))}</span>`).join("");
   const dayTickets = ticketsForDay(day);
   const pendingTicketCount = dayTickets.filter((ticket) => !isTicketPurchased(ticket)).length;
   const ticketSummary = dayTickets.length
     ? `<span class="day-ticket-summary ${pendingTicketCount ? "has-pending" : "is-complete"}">${pendingTicketCount ? `${pendingTicketCount} 项待购票` : "门票已准备"}</span>`
+    : "";
+  const doneCount = day.schedule.filter((item) => item.completed).length;
+  const doneSummary = day.schedule.length
+    ? `<span class="day-done-summary${doneCount === day.schedule.length ? " is-complete" : ""}">${doneCount}/${day.schedule.length} 已完成</span>`
     : "";
   return `
     <article class="day-card${isToday ? " is-today" : ""}" data-day="${day.day}">
@@ -558,12 +763,13 @@ function dayCard(day) {
           <span class="day-meta">DAY ${String(day.day).padStart(2, "0")} · ${escapeHtml(formatCompactDate(day.date))}${isToday ? " · 今天" : ""}</span>
           <span class="day-title">${escapeHtml(day.title)}</span>
           <span class="day-locations">${escapeHtml(day.locations.join(" → "))}</span>
-          ${ticketSummary}
+          <span class="day-badges">${ticketSummary}${doneSummary}</span>
         </span>
         <span class="day-chevron" aria-hidden="true">+</span>
       </button>
       <div class="day-detail" id="day-detail-${day.day}" ${expanded ? "" : "hidden"}>
         <ol class="schedule">${schedule}</ol>
+        ${dayAddFormMarkup(day)}
         ${costs ? `<div class="costs">${costs}</div>` : ""}
         ${notes.map((note) => `<p class="detail-note">${escapeHtml(note)}</p>`).join("")}
       </div>
@@ -643,15 +849,51 @@ function currentTripDay() {
   return state.data.days.find((day) => day.date === today)?.day || null;
 }
 
+/* Focus the editor that was just opened by 编辑. Looked up by dataset value rather
+   than by selector because the id contains "::". */
+function focusOpenScheduleEditor() {
+  if (!state.editingScheduleId) return;
+  const host = $$("[data-schedule-id]").find((node) => node.dataset.scheduleId === state.editingScheduleId);
+  host?.querySelector('[name="text"]')?.focus();
+}
+
 function renderTimeline() {
-  const today = currentTripDay();
-  state.expandedDay = today;
-  $("#day-count").textContent = `${state.data.days.length} DAYS`;
-  $("#timeline").innerHTML = state.data.days.map(dayCard).join("");
+  /* Only seed the expansion on the first paint. Every later re-render (toggling a
+     checkbox, saving an edit) must keep whatever the user has open — resetting to
+     "today" each time made an edit on day 7 snap the list back. */
+  if (!state.timelineRendered) {
+    state.expandedDay = currentTripDay();
+    state.timelineRendered = true;
+  }
+  const days = itineraryDays();
+  $("#day-count").textContent = `${days.length} DAYS`;
+  $("#timeline").innerHTML = days.map(dayCard).join("");
   $("#timeline").onclick = (event) => {
     const ticketButton = event.target.closest("[data-ticket-open]");
     if (ticketButton) {
       openTicketDialog(ticketButton.dataset.ticketOpen, ticketButton);
+      return;
+    }
+    const editButton = event.target.closest("[data-schedule-edit]");
+    if (editButton) {
+      state.editingScheduleId = editButton.closest("[data-schedule-id]")?.dataset.scheduleId || null;
+      renderTimeline();
+      focusOpenScheduleEditor();
+      return;
+    }
+    const cancelButton = event.target.closest("[data-schedule-cancel]");
+    if (cancelButton) {
+      state.editingScheduleId = null;
+      renderTimeline();
+      return;
+    }
+    const removeButton = event.target.closest("[data-schedule-remove]");
+    if (removeButton) {
+      const host = removeButton.closest("[data-schedule-id]");
+      if (!host) return;
+      removeItineraryEntry(Number(host.dataset.scheduleDay), host.dataset.scheduleItem, host.classList.contains("is-added"));
+      renderTimeline();
+      renderFocus();
       return;
     }
     const toggle = event.target.closest(".day-toggle");
@@ -669,7 +911,47 @@ function renderTimeline() {
       state.expandedDay = null;
     }
   };
+  $("#timeline").onsubmit = (event) => {
+    const form = event.target.closest("[data-schedule-form]");
+    if (!form) return;
+    event.preventDefault();
+    const day = Number(form.dataset.scheduleDay);
+    const read = (name) => String(form.querySelector(`[name="${name}"]`)?.value ?? "").trim();
+    const time = read("time");
+    const text = read("text");
+    const type = read("type") || "note";
+    if (!Number.isSafeInteger(day) || !text) return;
+    if (form.dataset.scheduleForm === "edit") {
+      const itemId = form.closest("[data-schedule-item]")?.dataset.scheduleItem || "";
+      if (!itemId) return;
+      state.editingScheduleId = null;
+      saveItineraryRecord(day, itemId, { time, text, type, completed: form.dataset.scheduleCompleted === "1" });
+    } else {
+      const itemId = `it-${day}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      saveItineraryRecord(day, itemId, { time, text, type, completed: false });
+    }
+    renderTimeline();
+    renderFocus();
+  };
   $("#timeline").onchange = (event) => {
+    const completeBox = event.target.closest("[data-schedule-complete]");
+    if (completeBox) {
+      const host = completeBox.closest("[data-schedule-id]");
+      if (!host) return;
+      const day = Number(host.dataset.scheduleDay);
+      const itemId = host.dataset.scheduleItem;
+      const entry = findItineraryEntry(day, itemId);
+      if (!entry) return;
+      saveItineraryRecord(day, itemId, {
+        time: entry.time,
+        text: entry.text,
+        type: entry.type,
+        completed: completeBox.checked
+      });
+      renderTimeline();
+      renderFocus();
+      return;
+    }
     const checkbox = event.target.closest(".schedule-ticket input[type='checkbox']");
     if (!checkbox) return;
     if (checkbox.checked) state.purchasedTickets.add(checkbox.value);
@@ -808,7 +1090,8 @@ function createRuntimeAdapters() {
   const tripId = state.data.metadata.tripId;
   const enabledCollections = [
     ...(moduleEnabled("todo") ? ["todos"] : []),
-    ...(moduleEnabled("itinerary") ? ["tickets"] : [])
+    /* tickets and itinerary are both rendered by the itinerary module. */
+    ...(moduleEnabled("itinerary") ? ["tickets", "itinerary"] : [])
   ];
   const localCollections = enabledCollections.filter((collection) => persistence.mode !== "d1" || !sharedCollections.has(collection));
   const d1Collections = enabledCollections.filter((collection) => persistence.mode === "d1" && sharedCollections.has(collection));
@@ -836,7 +1119,10 @@ async function loadSharedState() {
   const snapshotFor = (collection) => snapshots.find(([adapter]) => adapter === state.runtimeAdapters[collection])?.[1] || {};
   const todoSnapshot = snapshotFor("todos");
   const ticketSnapshot = snapshotFor("tickets");
+  const itinerarySnapshot = snapshotFor("itinerary");
   state.todos = Array.isArray(todoSnapshot.todos) ? todoSnapshot.todos : [];
+  state.itinerary = (Array.isArray(itinerarySnapshot.itinerary) ? itinerarySnapshot.itinerary : [])
+    .map(normalizeItineraryRecord).filter(Boolean);
   state.purchasedTickets = new Set((Array.isArray(ticketSnapshot.tickets) ? ticketSnapshot.tickets : []).filter((item) => item.completed).map((item) => item.id));
   const authoredTodos = state.data.preTrip?.todoItems || state.data.preTrip?.packingItems || [];
   const sourceById = new Map(authoredTodos.map((item) => [String(item.id || ""), item]));
@@ -917,15 +1203,83 @@ async function saveSharedChange(collection, value, op = "upsert") {
 
 function saveTodoState() { return Promise.all(state.todos.map((todo) => saveSharedChange("todos", todo))); }
 
-const TODO_CATEGORY_ORDER = ["0.随身物品", "1.必带类", "2.准备类", "3.衣物类", "4.日用类", "5.食品及药品类", "6.相机类", "其他"];
+const TODO_CATEGORY_ORDER = ["0.随身物品", "1.必带类", "2.准备类", "车载物品", "3.衣物类", "4.日用类", "5.食品及药品类", "6.相机类", "其他"];
+
+/* 必带类 and 衣物类 are packed per person — both travellers carry their own — so a
+   single shared tick cannot express the state. Those rows render one checkbox per
+   traveller and are only "done" when both are ticked. */
+const PER_PERSON_CATEGORIES = Object.freeze(["1.必带类", "3.衣物类"]);
+const PERSON_SLOTS = Object.freeze(["p1", "p2"]);
+const DEFAULT_PERSON_NAMES = Object.freeze(["我", "同行人"]);
+
+function isPerPersonCategory(category) {
+  return PER_PERSON_CATEGORIES.includes(String(category || ""));
+}
+
+/* Names come from the ledger's 同行人 list so the two modules agree on who is who.
+   Renaming there changes the labels here; a trip with no travellers yet falls back
+   to neutral labels rather than inventing names. */
+function personNames() {
+  let travelers = [];
+  try {
+    const snapshot = window.TravelLedger?.getSnapshot?.();
+    travelers = Array.isArray(snapshot?.travelers) ? snapshot.travelers : [];
+  } catch {
+    travelers = [];
+  }
+  const named = travelers.map((traveler) => String(traveler?.name || "").trim()).filter(Boolean);
+  return DEFAULT_PERSON_NAMES.map((fallback, index) => named[index] || fallback);
+}
+
+function normalizePersonSlots(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return Object.fromEntries(PERSON_SLOTS.map((slot) => [slot, Boolean(raw[slot])]));
+}
+
+function personSlotsFor(todo) {
+  const slots = normalizePersonSlots(todo?.completedBy);
+  if (slots) return slots;
+  /* Legacy record: one shared tick meant "packed", so credit both people. */
+  return Object.fromEntries(PERSON_SLOTS.map((slot) => [slot, Boolean(todo?.completed)]));
+}
+
+function todoCompleted(todo) {
+  if (!isPerPersonCategory(todo?.category)) return Boolean(todo?.completed);
+  const slots = personSlotsFor(todo);
+  return PERSON_SLOTS.every((slot) => slots[slot]);
+}
+
+function todoItemMarkup(todo, names) {
+  const perPerson = isPerPersonCategory(todo.category);
+  const done = todoCompleted(todo);
+  const slots = personSlotsFor(todo);
+  const partial = perPerson && !done && PERSON_SLOTS.some((slot) => slots[slot]);
+  const control = perPerson
+    ? `<div class="todo-persons">${PERSON_SLOTS.map((slot, index) => `
+        <label class="todo-person${slots[slot] ? " is-checked" : ""}" title="${escapeHtml(names[index])}">
+          <input type="checkbox" data-todo-person="${slot}" ${slots[slot] ? "checked" : ""} aria-label="${escapeHtml(names[index])}：${escapeHtml(todo.text)}">
+          <span class="todo-check" aria-hidden="true">✓</span>
+          <span class="todo-person__name">${escapeHtml(names[index])}</span>
+        </label>`).join("")}</div>`
+    : `<label class="todo-single">
+        <input type="checkbox" data-todo-single ${done ? "checked" : ""} aria-label="完成：${escapeHtml(todo.text)}">
+        <span class="todo-check" aria-hidden="true">✓</span>
+      </label>`;
+  return `
+    <div class="todo-item${done ? " is-complete" : ""}${partial ? " is-partial" : ""}${perPerson ? " is-per-person" : ""}" data-todo-id="${escapeHtml(todo.id)}">
+      <div class="todo-item__main">${control}<span class="todo-text">${escapeHtml(todo.text)}</span></div>
+      <button type="button" class="todo-delete" aria-label="删除：${escapeHtml(todo.text)}">删除</button>
+    </div>`;
+}
 
 function renderTodoList() {
-  const completed = state.todos.filter((todo) => todo.completed).length;
+  const completed = state.todos.filter(todoCompleted).length;
   $("#todo-progress").textContent = `${completed} / ${state.todos.length}`;
   if (!state.todos.length) {
     $("#todo-list").innerHTML = `<p class="todo-empty">还没有准备事项，添加第一项吧。</p>`;
     return;
   }
+  const names = personNames();
   const groups = new Map();
   for (const todo of state.todos) {
     const cat = todo.category || "其他";
@@ -941,21 +1295,15 @@ function renderTodoList() {
   const visibleCats = filter === "all" ? orderedCats : orderedCats.filter((cat) => cat === filter);
   const html = visibleCats.map((cat) => {
     const items = groups.get(cat);
-    const done = items.filter((item) => item.completed).length;
-    return `<div class="todo-group">
+    const done = items.filter(todoCompleted).length;
+    const perPerson = isPerPersonCategory(cat);
+    return `<div class="todo-group${perPerson ? " is-per-person" : ""}">
       <div class="todo-group__head">
         <span class="todo-group__name">${escapeHtml(cat)}</span>
         <span class="todo-group__count">${done} / ${items.length}</span>
       </div>
-      ${items.map((todo) => `
-        <div class="todo-item${todo.completed ? " is-complete" : ""}" data-todo-id="${escapeHtml(todo.id)}">
-          <label>
-            <input type="checkbox" ${todo.completed ? "checked" : ""} aria-label="完成：${escapeHtml(todo.text)}">
-            <span class="todo-check" aria-hidden="true">✓</span>
-            <span class="todo-text">${escapeHtml(todo.text)}</span>
-          </label>
-          <button type="button" class="todo-delete" aria-label="删除：${escapeHtml(todo.text)}">删除</button>
-        </div>`).join("")}
+      ${perPerson ? `<p class="todo-group__hint">两人各自带一份，左右两个勾选框分别对应 ${names.map((name) => escapeHtml(name)).join(" 和 ")}。</p>` : ""}
+      ${items.map((todo) => todoItemMarkup(todo, names)).join("")}
     </div>`;
   }).join("");
   $("#todo-list").innerHTML = html;
@@ -1004,7 +1352,17 @@ function renderTravelPrep() {
     const item = event.target.closest("[data-todo-id]");
     if (!item || !event.target.matches("input[type='checkbox']")) return;
     const todo = state.todos.find((entry) => entry.id === item.dataset.todoId);
-    todo.completed = event.target.checked;
+    if (!todo) return;
+    const personSlot = event.target.dataset.todoPerson;
+    if (personSlot) {
+      const slots = { ...personSlotsFor(todo), [personSlot]: event.target.checked };
+      todo.completedBy = slots;
+      /* Keep the plain flag in sync so the stored record stays readable on its own. */
+      todo.completed = PERSON_SLOTS.every((slot) => slots[slot]);
+    } else {
+      todo.completed = event.target.checked;
+      delete todo.completedBy;
+    }
     saveSharedChange("todos", todo).catch(console.error);
     renderTodoList();
   };
@@ -1202,6 +1560,7 @@ async function init() {
       } catch (error) {
         console.error(`${state.config.persistence.mode === "d1" ? "Shared" : "Local"} runtime data could not be loaded`, error);
         state.todos = [];
+        state.itinerary = [];
         state.purchasedTickets = new Set();
       }
     }
@@ -1212,6 +1571,18 @@ async function init() {
     renderFocus();
     if (moduleEnabled("ledger")) {
       await window.TravelLedger?.init?.({ tripId: state.data.metadata.tripId, config: state.config });
+      /* 行前准备 borrows the ledger's 同行人 names, and it rendered before the ledger
+         had loaded — repaint now that the names are actually available, and again
+         whenever someone is added or renamed. */
+      if (moduleEnabled("todo")) {
+        renderTravelPrep();
+        if (!state.prepNameListenerBound) {
+          state.prepNameListenerBound = true;
+          document.addEventListener("travel-ledger:changed", () => {
+            if (moduleEnabled("todo")) renderTravelPrep();
+          });
+        }
+      }
     }
     if (window.TravelDining?.init) {
       const persistence = state.config.persistence || { mode: "local" };

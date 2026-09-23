@@ -5,8 +5,18 @@
 
 - 静态资源：HTML / CSS / JS，无构建步骤
 - 共享数据：`functions/api/trip/[[tripId]].js`（Cloudflare Pages Function）+ D1
-- 共享范围：行前准备（todo）、行程票券（ticket）、记账（ledger）、餐饮（dining）
+- 共享范围：每日行程（itinerary）、行前准备（todo）、行程票券（ticket）、记账（ledger）、餐饮（dining）
 - 未列入共享范围的内容（如记账的币种偏好）仍只存在各自浏览器里
+
+功能要点：
+
+- **每日行程**可多端编辑：改时间 / 内容 / 类型、新增条目、删除条目、逐条标记「已完成」，
+  卡片上显示 `已完成 / 总数`。每条改动单独成一条记录，两个人同时改不同条目不会互相覆盖。
+- **行前准备**的「必带类」「衣物类」是每人一份，每行给出两个勾选框（人名取自记账模块的
+  「同行人」，没添加过就显示「我 / 同行人」），两人都勾才算完成。
+- **餐饮 → 饮食记录 → 消费类型**是可输入字段（带建议列表），内置类型不够用可以直接自己写。
+- **记账 → 消费明细**：各消费类型金额柱状图 + 占比饼图，以及「分账人 × 消费类型」柱状图，
+  可在「实际垫付」和「个人应分摊」两个口径间切换。
 
 ---
 
@@ -125,20 +135,28 @@ git push origin main
 
 1. Cloudflare Dashboard → **Storage & Databases** → **D1** → **Create database**
    - 名称自定，例如 `nz-trip`
-2. 打开这个数据库 → **Console**，依次执行 `migrations/` 下的两个 SQL 文件：
+2. 打开这个数据库 → **Console**，依次执行 `migrations/` 下的 SQL 文件：
 
-   | 顺序 | 文件 | 作用 |
-   | --- | --- | --- |
-   | 1 | `migrations/0001_shared_trip_data.sql` | `ledger_bills`、`ledger_travelers`、`trip_todos`、`trip_tickets` |
-   | 2 | `migrations/0002_dining_tables.sql` | `dining_restaurants`、`dining_records` |
+   | 顺序 | 文件 | 作用 | 必需 |
+   | --- | --- | --- | --- |
+   | 1 | `migrations/0001_shared_trip_data.sql` | `ledger_bills`、`ledger_travelers`、`trip_todos`、`trip_tickets` | ✅ |
+   | 2 | `migrations/0002_dining_tables.sql` | `dining_restaurants`、`dining_records` | ✅ |
+   | 3 | `migrations/0003_seed_pretrip_todos.sql` | 把 153 条行前准备灌入 `trip_todos` | 可选 |
+   | 4 | `migrations/0004_itinerary_table.sql` | `trip_itinerary`（每日行程的多端编辑） | ✅ |
 
-   两个文件都是 `CREATE TABLE IF NOT EXISTS`，可以安全重复执行。
+   全部都是 `CREATE TABLE IF NOT EXISTS` / `ON CONFLICT DO NOTHING`，可以安全重复执行。
+
+   - **`0003` 是可选的**：网页自己会在首次打开时把 `trip-data.json` 的行前准备导入共享层，
+     执行它只是省掉那次导入，或用于不希望依赖浏览器播种的场景。
+   - **`0004` 是必需的**（只要 `itinerary` 模块开着）：不建这张表，改行程 / 新增行程 /
+     标记完成都会写入失败。
 
    也可以用 Wrangler（会把改动应用到**云端**数据库，请确认数据库名再执行）：
 
    ```bash
    npx wrangler d1 execute <数据库名> --remote --file=./migrations/0001_shared_trip_data.sql
    npx wrangler d1 execute <数据库名> --remote --file=./migrations/0002_dining_tables.sql
+   npx wrangler d1 execute <数据库名> --remote --file=./migrations/0004_itinerary_table.sql
    ```
 
 ---

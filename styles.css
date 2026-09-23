@@ -196,6 +196,45 @@ main { overflow: hidden; }
 .costs { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
 .cost-tag { padding: 7px 9px; border-radius: 8px; background: #e8eeeb; color: #53615e; font-size: 11px; }
 
+/* ---------- 每日行程：多端编辑 ---------- */
+.day-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.day-done-summary { padding: 3px 8px; border-radius: 999px; background: #eef1ef; color: #5d6a67; font-size: 10px; font-weight: 750; }
+.day-done-summary.is-complete { background: #e2efe1; color: #3f6347; }
+.schedule-type { margin-left: 7px; padding: 2px 6px; border-radius: 6px; background: #e8eeeb; color: #5a6866; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.schedule-type--added { background: #dcecef; color: #205e6b; }
+.schedule-item.is-done::after { border-color: var(--forest); background: var(--forest); }
+.schedule-item.is-done .schedule-text { color: #87928f; text-decoration: line-through; }
+.schedule-actions { margin-top: 9px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.schedule-done { min-height: 34px; padding: 0 10px 0 4px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cbd8d5; border-radius: 999px; background: rgba(255,255,255,.75); cursor: pointer; }
+.schedule-done input { position: absolute; opacity: 0; pointer-events: none; }
+.schedule-done .todo-check { width: 19px; height: 19px; flex: 0 0 19px; border-radius: 6px; }
+.schedule-done input:checked + .todo-check { border-color: var(--forest); color: white; background: var(--forest); }
+.schedule-done span.schedule-done__label { font-size: 11px; font-weight: 700; color: var(--muted); }
+.schedule-done input:checked ~ .schedule-done__label { color: #3f6347; }
+.schedule-action { min-height: 34px; padding: 0 11px; border: 1px solid #cfdbd8; border-radius: 999px; background: rgba(255,255,255,.75); color: #3d5257; cursor: pointer; font-size: 11px; font-weight: 700; }
+.schedule-action:hover { border-color: var(--lake); color: var(--lake); }
+.schedule-action--danger { color: #9a7062; }
+.schedule-action--danger:hover { border-color: #d3a99a; color: #8a4a35; }
+.schedule-item.is-editing::after { border-color: var(--terracotta); }
+.schedule-editor { display: grid; gap: 8px; margin-top: 2px; }
+.schedule-editor__grid, .schedule-add__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.schedule-editor label, .schedule-add label { display: grid; gap: 4px; min-width: 0; }
+.schedule-editor label > span, .schedule-add label > span { color: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: .04em; }
+.schedule-editor input, .schedule-editor select, .schedule-add input, .schedule-add select { min-width: 0; min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.9); color: var(--ink); font: inherit; font-size: 12px; outline: none; }
+.schedule-editor input:focus, .schedule-editor select:focus, .schedule-add input:focus, .schedule-add select:focus { border-color: var(--lake); box-shadow: 0 0 0 3px rgba(40,123,144,.1); }
+.schedule-editor__actions, .schedule-add__actions { display: flex; align-items: center; gap: 8px; }
+.schedule-editor__actions button, .schedule-add__actions button { min-height: 38px; padding: 0 14px; border: 0; border-radius: 11px; background: var(--ink); color: white; cursor: pointer; font-size: 12px; font-weight: 750; }
+.schedule-editor__cancel { background: transparent !important; color: var(--muted) !important; border: 1px solid var(--line) !important; }
+.schedule-add { margin: 4px 0 18px; padding: 12px; border: 1px dashed #c6d4d1; border-radius: 14px; background: rgba(255,255,255,.55); display: grid; gap: 8px; }
+.schedule-add__progress { margin-right: auto; color: var(--muted); font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .06em; }
+@media (max-width: 460px) {
+  .schedule-editor__grid, .schedule-add__grid { grid-template-columns: 1fr; }
+  .schedule-item { padding-left: 64px; }
+  .schedule-time { width: 50px; }
+  .schedule-item::before { left: 54px; }
+  .schedule-item::after { left: 50px; }
+}
+
 .tickets-section { padding-top: 40px; }
 .tickets-summary { margin: -5px 0 15px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .ticket-filters { display: flex; gap: 7px; margin-bottom: 14px; overflow-x: auto; }
@@ -358,8 +397,18 @@ main { overflow: hidden; }
 .todo-group__name { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
 .todo-group__count { font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; color: var(--muted); }
 .todo-item { min-height: 54px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
-.todo-item label { min-width: 0; min-height: 54px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.todo-item__main { min-width: 0; min-height: 54px; padding: 6px 0; display: flex; align-items: center; gap: 10px; }
+.todo-item label { min-width: 0; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .todo-item input { position: absolute; opacity: 0; pointer-events: none; }
+.todo-item input:focus-visible + .todo-check { outline: 2px solid var(--lake); outline-offset: 2px; }
+/* 必带类 / 衣物类 are packed per person: one checkbox per traveller, side by side. */
+.todo-persons { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
+.todo-person { min-height: 40px; padding: 0 9px 0 3px; gap: 6px !important; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.72); }
+.todo-person.is-checked { border-color: var(--forest); background: #f1f7f0; }
+.todo-person.is-checked .todo-check { border-color: var(--forest); color: white; background: var(--forest); }
+.todo-person__name { max-width: 58px; color: var(--muted); font-size: 10px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-person.is-checked .todo-person__name { color: #3f6347; }
+.todo-group__hint { margin: -2px 0 10px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .todo-check { width: 22px; height: 22px; flex: 0 0 22px; border: 1.5px solid #93a5a2; border-radius: 7px; color: transparent; display: grid; place-items: center; font-size: 12px; }
 .todo-text { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
 .todo-item.is-complete .todo-check { border-color: var(--forest); color: white; background: var(--forest); }
