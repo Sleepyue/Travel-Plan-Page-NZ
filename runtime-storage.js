@@ -166,6 +166,15 @@
       return pending;
     }
 
+    // Apply many records against one snapshot and persist once. The authored
+    // pre-trip list is 150+ records; going through applyChange per record would
+    // rewrite localStorage once per record.
+    function applyLocalChanges(collection, values, op) {
+      let stored = readStoredSnapshot();
+      for (const value of values) stored = updateSnapshot(stored, collection, value, op);
+      return persistSnapshot(stored);
+    }
+
     return {
       mode: "local",
       tripId,
@@ -188,7 +197,10 @@
         });
       },
       async applyChange(collection, value, op = "upsert") {
-        return enqueue(() => persistSnapshot(updateSnapshot(readStoredSnapshot(), collection, value, op)));
+        return enqueue(() => applyLocalChanges(collection, [value], op));
+      },
+      async applyChanges(collection, values, op = "upsert") {
+        return enqueue(() => applyLocalChanges(collection, Array.isArray(values) ? values : [values], op));
       }
     };
   }
@@ -247,6 +259,31 @@
       return pending;
     }
 
+    // Batched write. The wire format already carries an array of changes, so a
+    // whole chunk travels in one POST and lands in one D1 batch() — importing
+    // the authored pre-trip list one record at a time would mean 150+ sequential
+    // round trips.
+    async function applyD1Changes(collection, values, op) {
+      return enqueue(async () => {
+        if (!ownedCollections.includes(collection)) {
+          throw new Error(`Runtime collection is not enabled for this D1 adapter: ${collection}`);
+        }
+        if (collection === "settings") {
+          let local = null;
+          for (const value of values) local = await settingsAdapter.applyChange(collection, value, op);
+          if (previous && local) previous.settings = local.settings;
+          return previous ? normalizeSnapshot(previous) : withLocalSettings(emptySnapshot());
+        }
+        const changes = values.map((value) => {
+          const id = String(typeof value === "object" && value !== null ? value.id || "" : value || "").trim();
+          if (!id) throw new Error(`${collection} records require a stable id`);
+          return { op, collection, id, ...(op === "upsert" ? { value: deepClone(value) } : {}) };
+        });
+        if (!changes.length) return previous ? normalizeSnapshot(previous) : withLocalSettings(emptySnapshot());
+        return request("POST", changes);
+      });
+    }
+
     return {
       mode: "d1",
       tripId,
@@ -290,19 +327,10 @@
         });
       },
       async applyChange(collection, value, op = "upsert") {
-        return enqueue(async () => {
-          if (!ownedCollections.includes(collection)) {
-            throw new Error(`Runtime collection is not enabled for this D1 adapter: ${collection}`);
-          }
-          if (collection === "settings") {
-            const local = await settingsAdapter.applyChange(collection, value, op);
-            if (previous) previous.settings = local.settings;
-            return previous ? normalizeSnapshot(previous) : withLocalSettings(emptySnapshot());
-          }
-          const id = String(typeof value === "object" && value !== null ? value.id || "" : value || "").trim();
-          if (!id) throw new Error(`${collection} records require a stable id`);
-          return request("POST", [{ op, collection, id, ...(op === "upsert" ? { value: deepClone(value) } : {}) }]);
-        });
+        return applyD1Changes(collection, [value], op);
+      },
+      async applyChanges(collection, values, op = "upsert") {
+        return applyD1Changes(collection, Array.isArray(values) ? values : [values], op);
       }
     };
   }

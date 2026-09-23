@@ -840,14 +840,59 @@ async function loadSharedState() {
   state.purchasedTickets = new Set((Array.isArray(ticketSnapshot.tickets) ? ticketSnapshot.tickets : []).filter((item) => item.completed).map((item) => item.id));
   const authoredTodos = state.data.preTrip?.todoItems || state.data.preTrip?.packingItems || [];
   const sourceById = new Map(authoredTodos.map((item) => [String(item.id || ""), item]));
-  if (todoAdapter?.mode === "local" && !hasLocalTodoSnapshot && !state.todos.length && authoredTodos.length) {
-    state.todos = authoredTodos.map((item, index) => ({
+
+  // The pre-trip list is authored in trip-data.json, but `todos` is a shared
+  // collection: once mode=d1 the module renders whatever the shared layer holds.
+  // A freshly created D1 is empty, so the authored list has to be imported once
+  // — otherwise the whole 行前准备 module silently reads as empty on the live
+  // site while trip-data.json still looks complete.
+  //
+  // The two modes need different "have we imported yet?" guards, and they must
+  // not share one: local mode already has an exact answer (is there a local
+  // snapshot?), while D1 has no way to tell "never imported" from "user deleted
+  // everything", so it uses a per-device flag. Keeping the flag out of local
+  // mode matters because otherwise importing once under D1 would suppress the
+  // import after switching persistence back to local, leaving the list empty.
+  const seedFlagKey = `travel-plan:todos-seeded:v1:${String(state.data.metadata.tripId || "default")}`;
+  let alreadySeeded = false;
+  if (todoAdapter?.mode === "d1") {
+    try { alreadySeeded = localStorage.getItem(seedFlagKey) === "1"; } catch { alreadySeeded = false; }
+  }
+  const needsImport = todoAdapter?.mode === "local" ? !hasLocalTodoSnapshot : !alreadySeeded;
+  const shouldSeedTodos = Boolean(todoAdapter) && !state.todos.length && authoredTodos.length > 0 && needsImport;
+
+  if (shouldSeedTodos) {
+    const seedRecords = authoredTodos.map((item, index) => ({
       id: String(item.id || `todo-initial-${index + 1}`),
       text: String(item.text || item.title || "").trim(),
       category: String(item.category || "其他"),
       completed: Boolean(item.completed)
     })).filter((item) => item.text);
-    await Promise.all(state.todos.map((todo) => todoAdapter.applyChange("todos", todo, "upsert")));
+    if (seedRecords.length) {
+      // Chunked so one oversized request cannot fail the whole import. Every
+      // record is an upsert keyed by its stable id, so a retry is idempotent.
+      const SEED_CHUNK = 50;
+      try {
+        for (let offset = 0; offset < seedRecords.length; offset += SEED_CHUNK) {
+          const chunk = seedRecords.slice(offset, offset + SEED_CHUNK);
+          if (typeof todoAdapter.applyChanges === "function") {
+            await todoAdapter.applyChanges("todos", chunk, "upsert");
+          } else {
+            await Promise.all(chunk.map((record) => todoAdapter.applyChange("todos", record, "upsert")));
+          }
+        }
+        state.todos = seedRecords;
+        // Latch the flag only after the import actually landed, so a failed or
+        // offline first load retries instead of leaving the list permanently
+        // empty. D1 only — see the guard comment above: writing it in local mode
+        // would suppress the import after switching persistence to D1.
+        if (todoAdapter.mode === "d1") {
+          try { localStorage.setItem(seedFlagKey, "1"); } catch {}
+        }
+      } catch (error) {
+        console.warn("TravelPlan could not import the authored pre-trip list into the shared layer.", error);
+      }
+    }
   } else if (sourceById.size) {
     // Reconcile a pre-existing browser snapshot with trip-data.json so grouped
     // headers + clean (prefix-free) names apply even for old saved snapshots.
