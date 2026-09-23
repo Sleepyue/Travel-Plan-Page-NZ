@@ -57,10 +57,13 @@ function moduleEnabled(name) {
 }
 
 function applyModuleConfig() {
-  document.querySelectorAll("[data-module]").forEach((element) => {
+  /* 视图容器（[data-site-view]）的显隐由 site-navigation.js 统一管理：
+     这里若一并设置，会出现「模块启用 → 强制显示」把 travel 与 prep 同时点亮的问题。 */
+  document.querySelectorAll("[data-module]:not([data-site-view])").forEach((element) => {
     element.hidden = !moduleEnabled(element.dataset.module);
   });
-  const visibleTravelLinks = [...document.querySelectorAll(".travel-navigation-menu [data-module]")].filter((link) => !link.hidden);
+  /* 顶层「行前准备」入口与菜单项共用 todo 模块开关；统计可见项时应含无 data-module 的固定项（如「天气」）。 */
+  const visibleTravelLinks = [...document.querySelectorAll(".travel-navigation-menu a")].filter((link) => !link.hidden);
   const travelNavigation = $("#travel-navigation");
   if (travelNavigation) travelNavigation.hidden = visibleTravelLinks.length === 0;
   document.documentElement.dataset.persistence = state.config.persistence.mode;

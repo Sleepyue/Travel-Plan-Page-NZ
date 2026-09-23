@@ -1,17 +1,25 @@
 (() => {
-  const TRAVEL_HASHES = new Set(["", "#top", "#flights", "#route", "#itinerary", "#drive", "#prep", "#weather"]);
+  const TRAVEL_HASHES = new Set(["", "#top", "#flights", "#route", "#itinerary", "#drive", "#weather"]);
   const isLedgerHash = (hash) => hash === "#ledger" || hash.startsWith("#ledger-");
   const isDiningHash = (hash) => hash === "#dining" || hash.startsWith("#dining-");
+  const isPrepHash = (hash) => hash === "#prep";
   const ledgerEnabled = () => !document.querySelector("#ledger-navigation-link")?.hidden;
   const diningEnabled = () => Boolean(document.querySelector("#dining-navigation-link"));
+  /* 行前准备是与「旅行信息」同级的独立视图；模块关闭时不接管 #prep。 */
+  const prepLink = () => document.querySelector("#prep-navigation-link");
+  const prepEnabled = () => {
+    const link = prepLink();
+    return Boolean(link) && !link.hidden;
+  };
   const viewForHash = (hash) => {
     if (isLedgerHash(hash) && ledgerEnabled()) return "ledger";
     if (isDiningHash(hash) && diningEnabled()) return "dining";
+    if (isPrepHash(hash) && prepEnabled()) return "prep";
     return "travel";
   };
 
   let activeView = "travel";
-  const scrollPositions = { travel: 0, ledger: 0, dining: 0 };
+  const scrollPositions = { travel: 0, ledger: 0, dining: 0, prep: 0 };
   let scrollFrame = 0;
   let browserRouteFrame = 0;
   let pendingBrowserRestore = false;
@@ -21,18 +29,20 @@
       travelView: document.querySelector('[data-site-view="travel"]'),
       ledgerView: document.querySelector('[data-site-view="ledger"]'),
       diningView: document.querySelector('[data-site-view="dining"]'),
+      prepView: document.querySelector('[data-site-view="prep"]'),
       travelMenu: document.querySelector("#travel-navigation"),
       travelTrigger: document.querySelector("#travel-navigation-trigger"),
       ledgerLink: document.querySelector("#ledger-navigation-link"),
       diningLink: document.querySelector("#dining-navigation-link"),
+      prepLink: document.querySelector("#prep-navigation-link"),
       skipLink: document.querySelector("#skip-link")
     };
   }
 
   function setVisibleView(nextView, options = {}) {
-    const { travelView, ledgerView, diningView, travelTrigger, ledgerLink, diningLink, skipLink } = elements();
-    const views = { travel: travelView, ledger: ledgerView, dining: diningView };
-    if (!travelView || !ledgerView || !diningView) return;
+    const { travelView, ledgerView, diningView, prepView, travelTrigger, ledgerLink, diningLink, prepLink: prepNavigationLink, skipLink } = elements();
+    const views = { travel: travelView, ledger: ledgerView, dining: diningView, prep: prepView };
+    if (!travelView || !ledgerView || !diningView || !prepView) return;
 
     const viewChanged = activeView !== nextView;
     if (viewChanged) scrollPositions[activeView] = window.scrollY;
@@ -45,14 +55,14 @@
     }
     document.body.dataset.activeView = nextView;
 
-    const currentTargets = { travel: travelTrigger, ledger: ledgerLink, dining: diningLink };
+    const currentTargets = { travel: travelTrigger, ledger: ledgerLink, dining: diningLink, prep: prepNavigationLink };
     for (const [name, element] of Object.entries(currentTargets)) {
       if (!element) continue;
       if (name === nextView) element.setAttribute("aria-current", "page");
       else element.removeAttribute("aria-current");
     }
 
-    const skipTargets = { travel: "#main", ledger: "#ledger-root", dining: "#dining-root" };
+    const skipTargets = { travel: "#main", ledger: "#ledger-root", dining: "#dining-root", prep: "#prep" };
     if (skipLink) skipLink.href = skipTargets[nextView] || "#main";
 
     if (nextView === "ledger") {
@@ -119,6 +129,14 @@
         event.preventDefault();
         travelMenu?.removeAttribute("open");
         navigate("#ledger");
+        return;
+      }
+
+      const prepNavigationLink = event.target.closest("#prep-navigation-link");
+      if (prepNavigationLink) {
+        event.preventDefault();
+        travelMenu?.removeAttribute("open");
+        navigate("#prep");
         return;
       }
 

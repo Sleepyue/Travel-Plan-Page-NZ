@@ -537,3 +537,56 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 .todo-filter-tabs button { border: 0; background: transparent; padding: 7px 12px; font-size: 12px; border-radius: 999px; cursor: pointer; color: var(--muted); font-weight: 700; transition: background .15s ease, color .15s ease; }
 .todo-filter-tabs button:hover { color: var(--ink); }
 .todo-filter-tabs button[aria-pressed="true"] { background: var(--ink); color: white; }
+
+/* 行前准备：与「旅行信息 / 餐饮 / 记账」同级的独立视图（2026-09-23 从旅行信息中拆出）。
+   视图容器的显隐由 site-navigation.js 管理；这里只管布局与切换动效。 */
+.prep-view {
+  min-height: calc(100vh - 48px);
+  min-height: calc(100dvh - 48px);
+}
+.prep-view:not([hidden]) { animation: prep-view-in .16s ease-out; }
+@keyframes prep-view-in {
+  from { opacity: .45; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .prep-view:not([hidden]) { animation: none; }
+}
+/* 独立成视图后不再有 hero 区块压顶，收紧首屏上边距。 */
+.prep-view .prep-section { padding-top: 24px; padding-bottom: 40px; }
+
+/* 顶层导航入口，位于「旅行信息」与「餐饮」之间。 */
+.topbar .primary-navigation__prep {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 680;
+}
+.topbar .primary-navigation__prep[aria-current="page"] { color: var(--ink); }
+.topbar .primary-navigation__prep[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--lake);
+}
+
+/* 顶层现在是四项，窄屏需要压缩，避免与 wordmark 抢空间。 */
+@media (max-width: 420px) {
+  .topbar .primary-navigation__prep { padding-inline: 5px; font-size: 11px; }
+  .topbar .primary-navigation__prep[aria-current="page"]::after { left: 5px; right: 5px; }
+  .topbar .primary-navigation__dining { padding-inline: 5px; }
+  .topbar .primary-navigation__dining[aria-current="page"]::after { left: 6px; right: 6px; }
+  .topbar nav a { padding: 0 4px; }
+  .topbar nav { gap: 0; }
+}

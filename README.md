@@ -10,6 +10,8 @@
 
 功能要点：
 
+- **四个同级大模块**：旅行信息 / 行前准备 / 餐饮 / 记账，顶栏直接切换（`data-site-view` + hash 路由）。
+  行前准备已从「旅行信息」中独立出来，可直接深链访问 `#prep`。
 - **每日行程**可多端编辑：改时间 / 内容 / 类型、新增条目、删除条目、逐条标记「已完成」，
   卡片上显示 `已完成 / 总数`。每条改动单独成一条记录，两个人同时改不同条目不会互相覆盖。
 - **行前准备**的「必带类」「衣物类」是每人一份，每行给出两个勾选框（人名取自记账模块的
@@ -266,7 +268,7 @@ styles.css                 主样式
 app.js                     主逻辑（行程、地图、todo、此刻关注）
 ledger.css / ledger.js     记账模块
 dining.css / dining.js     餐饮模块
-site-navigation.js         旅行信息 / 记账 / 餐饮 三视图切换
+site-navigation.js         旅行信息 / 行前准备 / 餐饮 / 记账 四视图切换
 runtime-storage.js         localStorage / D1 双适配器
 overview-map.js route-ui.js ticket-pdf-preview.js
 trip-data.json             全部行程数据（config / days / accommodations / ...）
