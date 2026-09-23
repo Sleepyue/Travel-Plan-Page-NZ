@@ -85,6 +85,8 @@ function snapshotFor(tripId, collections) {
   return snapshot;
 }
 
+let writeCount = 0;
+
 async function handleApi(request, response, url) {
   const tripId = String(decodeURIComponent(url.pathname.split("/")[3] || "")).trim().slice(0, 160);
   if (!tripId) return sendJson(response, { error: "trip_id is required" }, 400);
@@ -115,6 +117,7 @@ async function handleApi(request, response, url) {
     if (change.op === "delete") bucket.delete(id);
     else bucket.set(id, change.value || {});
   }
+  writeCount += 1;
   return sendJson(response, snapshotFor(tripId, collections));
 }
 
@@ -151,6 +154,9 @@ const server = http.createServer(async (request, response) => {
       const dump = {};
       for (const [key, bucket] of store) dump[key] = [...bucket.values()];
       return sendJson(response, dump);
+    }
+    if (url.pathname === "/__stats") {
+      return sendJson(response, { writes: writeCount });
     }
     if (url.pathname === "/__mock-reset") {
       store.clear();

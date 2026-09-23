@@ -722,15 +722,25 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
   .flight-editor__actions button { flex: 1 1 auto; }
 }
 
-/* ===== 「行程提醒」里的完成勾选（2026-09-23）=====
-   勾一下即把当前条目写入 completed，并自动前进到下一项；卡片是深色底，配色随之调整。 */
-.focus-card__actions { margin-top: 12px; }
-.focus-complete { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 16px 0 12px; border-radius: 999px; background: rgba(255,255,255,.14); cursor: pointer; }
-.focus-complete input { position: absolute; opacity: 0; pointer-events: none; }
-.focus-complete__box { width: 22px; height: 22px; flex: 0 0 22px; display: grid; place-items: center; border: 1.5px solid #9fd0d8; border-radius: 7px; color: transparent; font-size: 12px; transition: background .15s ease, color .15s ease; }
-.focus-complete input:checked + .focus-complete__box { background: #9fd0d8; color: #14313a; }
-.focus-complete input:focus-visible + .focus-complete__box { outline: 2px solid #9fd0d8; outline-offset: 2px; }
-.focus-complete__text { color: #eef7f8; font-size: 12px; font-weight: 740; }
+/* ===== 行程提醒：三卡轮播（上一件/最近一件/下一件）+ 未完成、完成按钮（2026-09-24）===== */
+.focus-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border-radius: var(--radius-lg);
+}
+.focus-carousel::-webkit-scrollbar { display: none; }
+.focus-slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; display: flex; }
+.focus-slide .focus-card { flex: 1 1 auto; }
+.focus-card.is-done .focus-card__event { text-decoration: line-through; text-decoration-color: rgba(238,247,248,.6); }
+.focus-card.is-empty { background: rgba(27, 55, 65, .5); box-shadow: none; }
+.focus-card__actions { margin-top: 14px; display: flex; gap: 10px; justify-content: center; }
+.focus-btn { min-height: 46px; padding: 0 28px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--ink); cursor: pointer; font-size: 13px; font-weight: 760; transition: opacity .15s ease, background .15s ease; }
+.focus-btn--done { border-color: var(--lake); background: var(--lake); color: #fff; }
+.focus-btn:hover:not(:disabled) { background: var(--lake-soft); }
+.focus-btn--done:hover:not(:disabled) { background: #236d80; }
+.focus-btn:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ===== 每日天气：手动更新（2026-09-23）===== */
 .weather-toolbar { margin: 0 0 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -739,3 +749,84 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 .weather-refresh:disabled { opacity: .62; cursor: progress; }
 .weather-note { color: var(--muted); font-size: 11px; }
 .weather-note.is-error { color: var(--warning); }
+
+
+/* ===== 每日行程：与旅行信息同级的大模块（2026-09-24）===== */
+.itinerary-view {
+  min-height: calc(100vh - 48px);
+  min-height: calc(100dvh - 48px);
+}
+.itinerary-view:not([hidden]) { animation: itinerary-view-in .16s ease-out; }
+@keyframes itinerary-view-in {
+  from { opacity: .45; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.itinerary-view .itinerary-section { padding-top: 24px; padding-bottom: 40px; }
+
+.topbar .primary-navigation__itinerary {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 680;
+}
+.topbar .primary-navigation__itinerary[aria-current="page"] { color: var(--ink); }
+.topbar .primary-navigation__itinerary[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--lake);
+}
+
+/* 总览 + DAY01-DAY11 单天查看按键（需求②b） */
+.itinerary-view-tabs { margin: 0 0 16px; display: flex; gap: 6px; flex-wrap: wrap; }
+.itinerary-view-tabs button { min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.8); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 720; transition: border-color .15s ease, color .15s ease, background .15s ease; }
+.itinerary-view-tabs button:hover { color: var(--ink); }
+.itinerary-view-tabs button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+
+/* 全局新增表单（需求②c）：日期 + 时间 + 类型 三列 */
+.schedule-add--global { margin-top: 16px; }
+.schedule-add--global .schedule-add__grid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr); }
+@media (max-width: 560px) {
+  .schedule-add--global .schedule-add__grid { grid-template-columns: 1fr; }
+}
+
+/* 天卡展开符号：默认全展开显示 −，收起显示 + */
+.day-chevron { transition: transform .18s ease; }
+.day-chevron.is-expanded { transform: rotate(45deg); }
+
+/* ===== 住宿安排 / 门票预订（需求④⑤），容器复用 .flight-carousel ===== */
+.stay-card__name { margin: 10px 0 8px; font-size: clamp(18px, 5vw, 24px); font-weight: 780; line-height: 1.2; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.stay-card__dates { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); font: 700 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.stay-card__dates b { margin-left: auto; padding: 3px 9px; border-radius: 999px; background: var(--lake-soft); color: var(--lake); font-size: 11px; }
+.stay-card__note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+.ticketplan-card { display: flex; flex-direction: column; align-items: flex-start; }
+.ticketplan-card__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.ticketplan-card__status { padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 760; background: #f6e2d8; color: #8f492e; }
+.ticketplan-card.is-purchased .ticketplan-card__status { background: #dfeade; color: #3f6347; }
+.ticketplan-card .schedule-ticket__open { margin-top: 12px; min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; cursor: pointer; font-size: 11px; font-weight: 750; }
+
+/* ===== 行前准备：分类批量设置责任人（需求 2）===== */
+.todo-group__tools { display: flex; align-items: center; gap: 8px; }
+.todo-group-owner select { max-width: 132px; min-height: 32px; padding: 0 6px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.9); color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
+.todo-group-owner select:focus-visible { outline: 2px solid var(--lake); outline-offset: 1px; }
+
+/* 顶层现在是五个入口，窄屏进一步压缩 */
+@media (max-width: 420px) {
+  .topbar .primary-navigation__travel { padding-inline: 5px; font-size: 11px; }
+  .topbar .primary-navigation__travel[aria-current="page"]::after { left: 5px; right: 5px; }
+  .topbar .primary-navigation__itinerary,
+  .topbar .primary-navigation__prep { padding-inline: 5px; font-size: 11px; }
+  .topbar .primary-navigation__itinerary[aria-current="page"]::after { left: 5px; right: 5px; }
+  .topbar nav a { padding: 0 3px; }
+}

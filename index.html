@@ -14,17 +14,17 @@
   <meta property="og:description" content="2026-09-25 至 10-05 · 香港 ⇄ 奥克兰 · 南岛环线 11 天：行程、机票住宿、自驾安排与共同记账。">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
-  <link rel="stylesheet" href="styles.css?v=20260923-10">
+  <link rel="stylesheet" href="styles.css?v=20260924-1">
   <link rel="stylesheet" href="ledger.css?v=20260923-3">
   <link rel="stylesheet" href="dining.css?v=20260923-6">
   <script src="runtime-storage.js?v=20260923-8" defer></script>
   <script src="overview-map.js?v=20260910-2" defer></script>
   <script src="route-ui.js?v=20260910-2" defer></script>
-  <script src="app.js?v=20260923-11" defer></script>
+  <script src="app.js?v=20260924-1" defer></script>
   <script src="ticket-pdf-preview.js?v=20260910-2" defer></script>
   <script src="ledger.js?v=20260923-4" defer></script>
   <script src="dining.js?v=20260923-8" defer></script>
-  <script src="site-navigation.js?v=20260923-7" defer></script>
+  <script src="site-navigation.js?v=20260924-1" defer></script>
 </head>
 <body>
   <a class="skip-link" id="skip-link" href="#main">跳到主要内容</a>
@@ -32,6 +32,7 @@
     <a class="wordmark" id="wordmark" href="#top" aria-label="返回顶部"></a>
     <nav class="primary-navigation" aria-label="主要模块">
       <a class="primary-navigation__travel" id="travel-navigation-link" href="#top">旅行信息</a>
+      <a class="primary-navigation__itinerary" id="itinerary-navigation-link" href="#itinerary" data-module="itinerary" hidden>每日行程</a>
       <a class="primary-navigation__prep" id="prep-navigation-link" href="#prep" data-module="todo" hidden>行前准备</a>
       <a class="primary-navigation__dining" id="dining-navigation-link" href="#dining">餐饮</a>
       <a class="primary-navigation__ledger" id="ledger-navigation-link" href="#ledger" data-module="ledger" hidden>记账</a>
@@ -52,7 +53,8 @@
         <a href="#focus-card-section">提醒</a>
         <a href="#flights" data-module="flights" hidden>航班</a>
         <a href="#route" data-module="overview" hidden>路线</a>
-        <a href="#itinerary" data-module="itinerary" hidden>行程</a>
+        <a href="#stay">住宿</a>
+        <a href="#tickets">门票</a>
         <a href="#weather">天气</a>
         <a href="#drive" data-module="driving" hidden>自驾</a>
       </div>
@@ -66,18 +68,11 @@
         </div>
         <span class="soft-label" id="focus-remaining"></span>
       </div>
-      <div class="focus-card">
-        <div class="focus-card__label">最近一件小事项</div>
-        <div class="focus-card__event" id="focus-event"></div>
-        <div class="focus-card__sub" id="focus-sub"></div>
-        <div class="focus-countdown" id="focus-countdown" aria-live="polite"></div>
-        <div class="focus-card__actions">
-          <label class="focus-complete">
-            <input type="checkbox" id="focus-complete">
-            <span class="focus-complete__box" aria-hidden="true">✓</span>
-            <span class="focus-complete__text">标记完成</span>
-          </label>
-        </div>
+      <div class="focus-carousel" id="focus-carousel" aria-label="行程提醒卡片，可左右滑动查看上一件与下一件"></div>
+      <div class="carousel-dots" id="focus-dots" aria-hidden="true"></div>
+      <div class="focus-card__actions">
+        <button type="button" class="focus-btn focus-btn--undo" id="focus-undo" disabled>未完成</button>
+        <button type="button" class="focus-btn focus-btn--done" id="focus-done" disabled>完成</button>
       </div>
     </section>
 
@@ -105,15 +100,29 @@
       <p class="route-caption">路线为行程示意，实际驾驶和步行请使用当天的 Google Maps 导航。</p>
     </section>
 
-    <section class="section itinerary-section" id="itinerary" aria-labelledby="itinerary-title" data-module="itinerary" hidden>
+    <section class="section stay-section" id="stay" aria-labelledby="stay-title">
       <div class="section-heading">
         <div>
-          <p class="section-kicker">DAY BY DAY</p>
-          <h2 id="itinerary-title">每日行程</h2>
+          <p class="section-kicker">CHECK-IN</p>
+          <h2 id="stay-title">住宿安排</h2>
         </div>
-        <span class="soft-label" id="day-count"></span>
+        <p class="section-index" id="stay-index" aria-live="polite">1 / 1</p>
       </div>
-      <div class="timeline" id="timeline"></div>
+      <div class="flight-carousel stay-carousel" id="stay-carousel" aria-label="住宿卡片，可左右滑动"></div>
+      <div class="carousel-dots" id="stay-dots" aria-hidden="true"></div>
+    </section>
+
+    <section class="section tickets-section" id="tickets" aria-labelledby="tickets-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">ATTRACTION TICKETS</p>
+          <h2 id="tickets-title">门票预订</h2>
+        </div>
+        <p class="section-index" id="tickets-index" aria-live="polite">1 / 1</p>
+      </div>
+      <div class="flight-carousel tickets-carousel" id="tickets-carousel" aria-label="门票卡片，可左右滑动"></div>
+      <div class="carousel-dots" id="tickets-dots" aria-hidden="true"></div>
+      <p class="route-caption">购票状态在「每日行程」的对应条目里也会同步显示。</p>
     </section>
 
     <section class="section weather-section" id="weather" aria-labelledby="weather-title">
@@ -148,6 +157,31 @@
       <p id="footer-mark"></p>
       <a href="#top">回到顶部 ↑</a>
     </footer>
+  </main>
+
+  <main class="itinerary-view" id="itinerary-view" data-site-view="itinerary" data-module="itinerary" hidden>
+    <section class="section itinerary-section" id="itinerary" aria-labelledby="itinerary-title">
+      <div class="section-heading">
+        <div>
+          <p class="section-kicker">DAY BY DAY</p>
+          <h2 id="itinerary-title">每日行程</h2>
+        </div>
+        <span class="soft-label" id="day-count"></span>
+      </div>
+      <form class="schedule-add schedule-add--global" id="schedule-add-form" data-schedule-form="add">
+        <div class="schedule-add__grid">
+          <label><span>日期</span><select name="day" id="schedule-add-day"></select></label>
+          <label><span>时间</span><input type="time" name="time" required></label>
+          <label><span>类型</span><select name="type" id="schedule-add-type"></select></label>
+        </div>
+        <label><span>内容</span><input type="text" name="text" maxlength="200" placeholder="例如：18:30 米佛峡湾游船" required></label>
+        <div class="schedule-add__actions">
+          <button type="submit">＋ 新增行程</button>
+        </div>
+      </form>
+      <div class="itinerary-view-tabs" id="itinerary-view-tabs" role="group" aria-label="按天查看每日行程"></div>
+      <div class="timeline" id="timeline"></div>
+    </section>
   </main>
 
   <main class="prep-view" id="prep-view" data-site-view="prep" data-module="todo" hidden>

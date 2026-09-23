@@ -2,8 +2,10 @@ const state = {
   data: null,
   config: null,
   runtimeAdapters: {},
-  expandedDay: null,
-  timelineRendered: false,
+  /* 每日行程：默认全部展开，collapsedDays 只记录被手动收起的天；
+     itineraryView 为 "all"（总览）或具体天号（单天查看按键）。 */
+  collapsedDays: new Set(),
+  itineraryView: "all",
   editingScheduleId: null,
   countdownTimer: null,
   purchasedTickets: new Set(),
@@ -151,37 +153,34 @@ function dayUtcOffset(day) {
   return day.date >= "2026-09-27" ? "+13:00" : "+12:00";
 }
 
-function nextScheduleItem() {
+/* ---------- 行程提醒：三卡轮播（上一件·已完成 / 最近一件 / 下一件） ----------
+   数据仍全部来自每日行程的合并视图；轮播交互对齐航班卡片。 */
+
+function reminderTriplet() {
   const now = Date.now();
-  const candidates = [];
-  /* Reads the merged itinerary so edits show up here too, and skips items already
-     ticked off — otherwise 「行程提醒」 kept pointing at something just completed. */
+  const items = [];
   for (const day of itineraryDays()) {
     const offset = dayUtcOffset(day);
     for (const item of day.schedule || []) {
-      if (item.completed) continue;
       const clock = String(item.time || "").match(/(\d{1,2}):(\d{2})/);
       if (!clock) continue;
       const target = new Date(`${day.date}T${clock[1].padStart(2, "0")}:${clock[2]}:00${offset}`);
       if (Number.isNaN(target.getTime())) continue;
-      candidates.push({ target, day, item });
+      items.push({ target, day, item });
     }
   }
-  if (!candidates.length) return null;
-  candidates.sort((first, second) => first.target - second.target);
-  const remaining = candidates.filter((candidate) => candidate.target.getTime() > now).length;
-  const future = candidates.find((candidate) => candidate.target.getTime() > now);
-  const chosen = future || candidates[candidates.length - 1];
-  const text = String(chosen.item.text || "").trim();
+  items.sort((first, second) => first.target - second.target);
+  const pending = items.filter((entry) => !entry.item.completed);
+  if (!pending.length) return null;
+  /* 最近一件：优先取未来第一件；全部过期时取最后一件（旧行为一致）。 */
+  const current = pending.find((entry) => entry.target.getTime() > now) || pending[pending.length - 1];
+  const currentIndex = items.indexOf(current);
+  const prev = [...items.slice(0, currentIndex)].reverse().find((entry) => entry.item.completed) || null;
   return {
-    target: chosen.target,
-    /* 一并暴露 day / itemId，让「行程提醒」能写入与每日行程完全相同的那条记录。 */
-    day: chosen.day.day,
-    itemId: chosen.item.itemId,
-    label: text || `DAY ${String(chosen.day.day).padStart(2, "0")}`,
-    sub: `DAY ${String(chosen.day.day).padStart(2, "0")} · ${formatCompactDate(chosen.day.date)} ${chosen.item.time}`,
-    remaining,
-    finished: !future
+    prev,
+    current,
+    next: items[currentIndex + 1] || null,
+    remaining: pending.filter((entry) => entry.target.getTime() > now).length
   };
 }
 
@@ -206,7 +205,35 @@ function updateFocusCountdown() {
   el.innerHTML = `${focusUnit(days, "天")}${focusUnit(hours, "时")}${focusUnit(minutes, "分")}${focusUnit(seconds, "秒")}`;
 }
 
-/* 「提醒」栏目与行程提醒卡片同显隐：卡片在没有下一项时会自己隐藏。 */
+function focusCardMarkup(entry, role) {
+  const roleLabel = role === "prev" ? "上一件 · 已完成" : role === "next" ? "下一件" : "最近一件";
+  if (!entry) {
+    return `
+      <article class="focus-slide focus-card is-empty" data-focus-role="${role}">
+        <div class="focus-card__label">${roleLabel}</div>
+        <div class="focus-card__event">${role === "prev" ? "还没有已完成的行程" : "后面暂时没有安排"}</div>
+        <div class="focus-card__sub">左右滑动查看其它提醒</div>
+      </article>`;
+  }
+  const { day, item } = entry;
+  return `
+    <article class="focus-slide focus-card${item.completed ? " is-done" : ""}" data-focus-role="${role}" data-focus-day="${day.day}" data-focus-item="${escapeHtml(item.itemId)}">
+      <div class="focus-card__label">${roleLabel}</div>
+      <div class="focus-card__event">${escapeHtml(item.text || `DAY ${String(day.day).padStart(2, "0")}`)}</div>
+      <div class="focus-card__sub">${escapeHtml(`DAY ${String(day.day).padStart(2, "0")} · ${formatCompactDate(day.date)} ${item.time || ""}`)}</div>
+      ${role === "current" ? `<div class="focus-countdown" id="focus-countdown" aria-live="polite"></div>` : ""}
+    </article>`;
+}
+
+/* 轮播当前可见的是哪张卡：0=上一件 1=最近一件 2=下一件。 */
+function visibleFocusRole() {
+  const carousel = $("#focus-carousel");
+  if (!carousel || !carousel.clientWidth) return "current";
+  const index = Math.max(0, Math.min(2, Math.round(carousel.scrollLeft / carousel.clientWidth)));
+  return ["prev", "current", "next"][index] || "current";
+}
+
+/* 「提醒」栏目与行程提醒卡片同显隐：卡片在没有未完成事项时会自己隐藏。 */
 function syncFocusNavLink() {
   const link = document.querySelector('.trip-nav a[href="#focus-card-section"]');
   const card = $("#focus-card-section");
@@ -216,38 +243,70 @@ function syncFocusNavLink() {
 function renderFocus() {
   const card = $("#focus-card-section");
   if (!card) return;
-  const next = nextScheduleItem();
-  if (!next) { card.hidden = true; state.focusTarget = null; syncFocusNavLink(); return; }
+  const triplet = reminderTriplet();
+  if (!triplet) { card.hidden = true; state.focusTarget = null; syncFocusNavLink(); return; }
   card.hidden = false;
   syncFocusNavLink();
-  $("#focus-event").textContent = next.label;
-  $("#focus-sub").textContent = next.sub;
+
+  const carousel = $("#focus-carousel");
+  carousel.innerHTML = [
+    focusCardMarkup(triplet.prev, "prev"),
+    focusCardMarkup(triplet.current, "current"),
+    focusCardMarkup(triplet.next, "next")
+  ].join("");
+  const dots = $("#focus-dots");
+  const paintDots = (index) => {
+    dots.innerHTML = [0, 1, 2].map((dot) => `<span class="carousel-dot${dot === index ? " is-active" : ""}"></span>`).join("");
+  };
+  paintDots(1);
+
+  /* 每次重绘都回到中间一张（最近一件）；左右滑动看上一件 / 下一件。 */
+  requestAnimationFrame(() => { carousel.scrollLeft = carousel.clientWidth; });
+  let scheduled = false;
+  carousel.onscroll = () => {
+    if (scheduled || !carousel.clientWidth) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      const index = Math.max(0, Math.min(2, Math.round(carousel.scrollLeft / carousel.clientWidth)));
+      paintDots(index);
+      updateFocusButtons(["prev", "current", "next"][index]);
+    });
+  };
+
   const remaining = $("#focus-remaining");
-  if (remaining) remaining.textContent = next.finished ? "全部完成" : `还剩 ${next.remaining} 项`;
-  state.focusTarget = next.target;
-  state.focusFinished = next.finished;
+  if (remaining) remaining.textContent = `还剩 ${triplet.remaining} 项`;
+  state.focusTarget = triplet.current?.target || null;
+  state.focusFinished = !(triplet.current?.target.getTime() > Date.now());
   updateFocusCountdown();
 
-  /* 与每日行程联动：在这里勾完成，等价于给同一条行程记录写入 completed。
-     用 onchange 赋值而非 addEventListener —— renderFocus 会被反复调用。 */
-  const box = $("#focus-complete");
-  if (box) {
-    box.checked = false;
-    box.disabled = false;
-    box.onchange = () => completeFocusItem(next.day, next.itemId);
-  }
+  /* 按钮作用于「当前可见的那张卡」：完成 / 未完成按该条目的状态各自禁用。 */
+  const updateFocusButtons = (role) => {
+    const entry = triplet[role] || triplet.current;
+    const done = $("#focus-done");
+    const undo = $("#focus-undo");
+    if (done) done.disabled = !entry || entry.item.completed;
+    if (undo) undo.disabled = !entry || !entry.item.completed;
+  };
+  updateFocusButtons("current");
+  $("#focus-done").onclick = () => applyFocusCompletion(true);
+  $("#focus-undo").onclick = () => applyFocusCompletion(false);
 }
 
-/* 「行程提醒」的完成勾选：写入每日行程用的同一条记录，因此两个模块天然同步 ——
-   在提醒处勾选，每日行程对应条目立刻显示为已完成；反之亦然。 */
-function completeFocusItem(day, itemId) {
-  const entry = findItineraryEntry(day, itemId);
+/* 「完成 / 未完成」作用于轮播中当前可见的那张卡。
+   完成（需求③d）：把该条目的时间更新为完成时刻 —— 例如 11:00 的午餐在 10:50 点完成，
+   每日行程里的时间就改成 10:50；未完成不改时间。 */
+function applyFocusCompletion(completed) {
+  const triplet = reminderTriplet();
+  const entry = triplet?.[visibleFocusRole()] || triplet?.current;
   if (!entry) return;
-  saveItineraryRecord(day, itemId, {
-    time: entry.time,
-    text: entry.text,
-    type: entry.type,
-    completed: true
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  saveItineraryRecord(entry.day.day, entry.item.itemId, {
+    time: completed ? time : entry.item.time,
+    text: entry.item.text,
+    type: entry.item.type,
+    completed
   });
   renderTimeline();
   renderFocus();
@@ -908,28 +967,46 @@ function scheduleItemMarkup(day, item) {
     </li>`;
 }
 
-function dayAddFormMarkup(day) {
-  const done = day.schedule.filter((item) => item.completed).length;
-  return `
-    <form class="schedule-add" data-schedule-form="add" data-schedule-day="${day.day}">
-      <div class="schedule-add__grid">
-        <label><span>时间</span><input type="time" name="time" required></label>
-        <label><span>类型</span>
-          <select name="type">${SCHEDULE_TYPES.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
-        </label>
-      </div>
-      <label><span>内容</span><input type="text" name="text" maxlength="200" placeholder="例如：18:30 米佛峡湾游船" required></label>
-      <div class="schedule-add__actions">
-        <span class="schedule-add__progress">已完成 ${done} / ${day.schedule.length}</span>
-        <button type="submit">＋ 新增行程</button>
-      </div>
-    </form>`;
+/* 查看按键：总览 + DAY01-DAY11 单天查看（需求②b）。 */
+function renderItineraryViewTabs(days) {
+  const container = $("#itinerary-view-tabs");
+  if (!container) return;
+  const view = String(state.itineraryView);
+  const tabs = [["all", "总览"], ...days.map((day) => [String(day.day), `DAY ${String(day.day).padStart(2, "0")}`])];
+  container.innerHTML = tabs.map(([value, label]) =>
+    `<button type="button" data-itinerary-view="${value}" aria-pressed="${view === value}">${escapeHtml(label)}</button>`).join("");
+  container.onclick = (event) => {
+    const button = event.target.closest("[data-itinerary-view]");
+    if (!button) return;
+    const value = button.dataset.itineraryView;
+    state.itineraryView = value === "all" ? "all" : Number(value);
+    if (state.itineraryView !== "all") state.collapsedDays.delete(state.itineraryView);
+    renderTimeline();
+  };
+}
+
+/* 全局新增表单的日期 / 类型下拉（表单在查看按键上方，属视图骨架，不随天卡重绘）。
+   保留用户已选的日期，其它操作触发重绘时不会打断填写。 */
+function renderScheduleAddForm(days) {
+  const daySelect = $("#schedule-add-day");
+  const typeSelect = $("#schedule-add-type");
+  if (!daySelect || !typeSelect) return;
+  const previous = daySelect.value;
+  if (daySelect.options.length !== days.length) {
+    daySelect.innerHTML = days.map((day) =>
+      `<option value="${day.day}">DAY ${String(day.day).padStart(2, "0")} · ${escapeHtml(formatCompactDate(day.date))}</option>`).join("");
+  }
+  const fallback = String(currentTripDay() || days[0]?.day || 1);
+  daySelect.value = days.some((day) => String(day.day) === previous) ? previous : fallback;
+  if (!typeSelect.options.length) {
+    typeSelect.innerHTML = SCHEDULE_TYPES.map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
+  }
 }
 
 function dayCard(day) {
   const today = todayForTrip();
   const isToday = day.date === today;
-  const expanded = state.expandedDay === day.day;
+  const expanded = !state.collapsedDays.has(day.day);
   const schedule = day.schedule.map((item) => scheduleItemMarkup(day, item)).join("");
   const notes = [...(day.notes || []), ...(day.sourceDateLabelConflict ? [day.sourceDateLabelConflict] : [])];
   const costs = (day.costReferences || []).map((cost) => `<span class="cost-tag">${escapeHtml(costText(cost))}</span>`).join("");
@@ -952,11 +1029,10 @@ function dayCard(day) {
           <span class="day-locations">${escapeHtml(day.locations.join(" → "))}</span>
           <span class="day-badges">${ticketSummary}${doneSummary}</span>
         </span>
-        <span class="day-chevron" aria-hidden="true">+</span>
+        <span class="day-chevron${expanded ? " is-expanded" : ""}" aria-hidden="true">${expanded ? "−" : "+"}</span>
       </button>
       <div class="day-detail" id="day-detail-${day.day}" ${expanded ? "" : "hidden"}>
         <ol class="schedule">${schedule}</ol>
-        ${dayAddFormMarkup(day)}
         ${costs ? `<div class="costs">${costs}</div>` : ""}
         ${notes.map((note) => `<p class="detail-note">${escapeHtml(note)}</p>`).join("")}
       </div>
@@ -1045,16 +1121,12 @@ function focusOpenScheduleEditor() {
 }
 
 function renderTimeline() {
-  /* Only seed the expansion on the first paint. Every later re-render (toggling a
-     checkbox, saving an edit) must keep whatever the user has open — resetting to
-     "today" each time made an edit on day 7 snap the list back. */
-  if (!state.timelineRendered) {
-    state.expandedDay = currentTripDay();
-    state.timelineRendered = true;
-  }
   const days = itineraryDays();
   $("#day-count").textContent = `${days.length} DAYS`;
-  $("#timeline").innerHTML = days.map(dayCard).join("");
+  renderItineraryViewTabs(days);
+  renderScheduleAddForm(days);
+  const visible = state.itineraryView === "all" ? days : days.filter((day) => day.day === state.itineraryView);
+  $("#timeline").innerHTML = visible.map(dayCard).join("");
   $("#timeline").onclick = (event) => {
     const ticketButton = event.target.closest("[data-ticket-open]");
     if (ticketButton) {
@@ -1083,42 +1155,13 @@ function renderTimeline() {
       renderFocus();
       return;
     }
+    /* 默认全部展开：点天头只在「收起 / 展开」这一张卡之间切换，不再互斥。 */
     const toggle = event.target.closest(".day-toggle");
     if (!toggle) return;
-    const card = toggle.closest(".day-card");
-    const dayNumber = Number(card.dataset.day);
-    const wasExpanded = toggle.getAttribute("aria-expanded") === "true";
-    $$(".day-toggle", $("#timeline")).forEach((button) => button.setAttribute("aria-expanded", "false"));
-    $$(".day-detail", $("#timeline")).forEach((detail) => { detail.hidden = true; });
-    if (!wasExpanded) {
-      toggle.setAttribute("aria-expanded", "true");
-      $(`#day-detail-${dayNumber}`).hidden = false;
-      state.expandedDay = dayNumber;
-    } else {
-      state.expandedDay = null;
-    }
-  };
-  $("#timeline").onsubmit = (event) => {
-    const form = event.target.closest("[data-schedule-form]");
-    if (!form) return;
-    event.preventDefault();
-    const day = Number(form.dataset.scheduleDay);
-    const read = (name) => String(form.querySelector(`[name="${name}"]`)?.value ?? "").trim();
-    const time = read("time");
-    const text = read("text");
-    const type = read("type") || "note";
-    if (!Number.isSafeInteger(day) || !text) return;
-    if (form.dataset.scheduleForm === "edit") {
-      const itemId = form.closest("[data-schedule-item]")?.dataset.scheduleItem || "";
-      if (!itemId) return;
-      state.editingScheduleId = null;
-      saveItineraryRecord(day, itemId, { time, text, type, completed: form.dataset.scheduleCompleted === "1" });
-    } else {
-      const itemId = `it-${day}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-      saveItineraryRecord(day, itemId, { time, text, type, completed: false });
-    }
+    const dayNumber = Number(toggle.closest(".day-card").dataset.day);
+    if (state.collapsedDays.has(dayNumber)) state.collapsedDays.delete(dayNumber);
+    else state.collapsedDays.add(dayNumber);
     renderTimeline();
-    renderFocus();
   };
   $("#timeline").onchange = (event) => {
     const completeBox = event.target.closest("[data-schedule-complete]");
@@ -1145,6 +1188,41 @@ function renderTimeline() {
     else state.purchasedTickets.delete(checkbox.value);
     saveTicketState(checkbox.value, checkbox.checked);
     updateInlineTicketState(checkbox.value, checkbox.checked);
+  };
+  /* 行内「编辑」表单：保存走共享层同一条覆盖记录（全局新增表单另有自己的 onsubmit）。 */
+  $("#timeline").onsubmit = (event) => {
+    const form = event.target.closest("[data-schedule-form]");
+    if (!form || form.dataset.scheduleForm !== "edit") return;
+    event.preventDefault();
+    const day = Number(form.dataset.scheduleDay);
+    const read = (name) => String(form.querySelector(`[name="${name}"]`)?.value ?? "").trim();
+    const itemId = form.closest("[data-schedule-item]")?.dataset.scheduleItem || "";
+    const time = read("time");
+    const text = read("text");
+    if (!itemId || !Number.isSafeInteger(day) || !time || !text) return;
+    state.editingScheduleId = null;
+    saveItineraryRecord(day, itemId, { time, text, type: read("type") || "note", completed: form.dataset.scheduleCompleted === "1" });
+    renderTimeline();
+    renderFocus();
+  };
+  /* 全局新增表单在查看按键上方；提交后切到对应天，让用户立刻看到新条目。 */
+  const addForm = $("#schedule-add-form");
+  if (addForm) addForm.onsubmit = (event) => {
+    event.preventDefault();
+    const read = (name) => String(addForm.querySelector(`[name="${name}"]`)?.value ?? "").trim();
+    const day = Number(read("day"));
+    const time = read("time");
+    const text = read("text");
+    const type = read("type") || "note";
+    if (!Number.isSafeInteger(day) || !days.some((entry) => entry.day === day) || !time || !text) return;
+    const itemId = `it-${day}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    saveItineraryRecord(day, itemId, { time, text, type, completed: false });
+    addForm.reset();
+    renderScheduleAddForm(days);
+    state.itineraryView = day;
+    state.collapsedDays.delete(day);
+    renderTimeline();
+    renderFocus();
   };
 }
 
@@ -1574,7 +1652,16 @@ function renderTodoList() {
     return `<div class="todo-group${hasPair ? " is-per-person" : ""}">
       <div class="todo-group__head">
         <span class="todo-group__name">${escapeHtml(cat)}</span>
-        <span class="todo-group__count">${done} / ${items.length}</span>
+        <span class="todo-group__tools">
+          <label class="todo-group-owner">
+            <select data-group-owner data-group-category="${escapeHtml(cat)}" aria-label="批量设置「${escapeHtml(cat)}」全部条目的责任人">
+              <option value="">批量责任人…</option>
+              ${PERSON_SLOTS.map((slot, index) => `<option value="${slot}">${escapeHtml(names[index])}</option>`).join("")}
+              <option value="both">共同</option>
+            </select>
+          </label>
+          <span class="todo-group__count">${done} / ${items.length}</span>
+        </span>
       </div>
       ${hasPair ? `<p class="todo-group__hint">标为「共同」的项两人各带一份，切到「${names.map((name) => escapeHtml(name)).join("」或「")}」左右各自勾选自己那份。</p>` : ""}
       ${items.map((todo) => todoItemMarkup(todo, names, view)).join("")}
@@ -1609,6 +1696,36 @@ function renderTodoFilters() {
   };
 }
 
+/* 一键把某个分类下的全部条目划给同一位责任人（需求 2）。
+   日用类有 65 条，用 applyChanges 一次批量写，绝不逐条 POST。 */
+function bulkSetTodoOwner(category, owner) {
+  const changed = [];
+  for (const todo of state.todos) {
+    if ((todo.category || "其他") !== category) continue;
+    const wasPair = ownerFor(todo) === "both";
+    todo.owner = owner;
+    if (owner === "both") {
+      const slots = personSlotsFor(todo);
+      if (todo.completed) slots.p1 = true;
+      todo.completedBy = slots;
+      todo.completed = PERSON_SLOTS.every((slot) => slots[slot]);
+    } else {
+      /* 从「共同」改单人有沿用规则：保留第一人的勾选状态，避免整组凭空完成。 */
+      if (wasPair) todo.completed = Boolean(personSlotsFor(todo).p1);
+      delete todo.completedBy;
+    }
+    changed.push(todo);
+  }
+  if (!changed.length) return;
+  const adapter = state.runtimeAdapters.todos;
+  if (adapter?.applyChanges) {
+    adapter.applyChanges("todos", changed, "upsert").catch((error) => console.error("批量责任人没有同步到共享层。", error));
+  } else {
+    changed.forEach((todo) => saveSharedChange("todos", todo).catch(console.error));
+  }
+  renderTodoList();
+}
+
 function renderTravelPrep() {
   renderTodoFilters();
   renderTodoList();
@@ -1632,6 +1749,13 @@ function renderTravelPrep() {
     renderTodoList();
   };
   $("#todo-list").onchange = (event) => {
+    const groupSelect = event.target.closest("[data-group-owner]");
+    if (groupSelect) {
+      const owner = groupSelect.value;
+      groupSelect.value = "";
+      if (OWNER_SLOTS.includes(owner)) bulkSetTodoOwner(groupSelect.dataset.groupCategory, owner);
+      return;
+    }
     const item = event.target.closest("[data-todo-id]");
     if (!item) return;
     const todo = state.todos.find((entry) => entry.id === item.dataset.todoId);
@@ -1936,6 +2060,101 @@ async function refreshWeather() {
   }
 }
 
+/* ---------- 住宿安排 / 门票预订：卡片轮播，交互对齐航班行程 ---------- */
+
+/* 航班轮播的「滑动 → 高亮圆点 + 序号」逻辑在这里是同一套，抽成通用绑定。 */
+function bindSimpleCarousel(carouselId, dotsId, indexId, total) {
+  const carousel = $(`#${carouselId}`);
+  if (!carousel) return;
+  let scheduled = false;
+  carousel.onscroll = () => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      const cards = [...carousel.children];
+      if (!cards.length) return;
+      const center = carousel.scrollLeft + carousel.clientWidth / 2;
+      let activeIndex = 0;
+      let distance = Infinity;
+      cards.forEach((card, index) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        if (Math.abs(cardCenter - center) < distance) {
+          distance = Math.abs(cardCenter - center);
+          activeIndex = index;
+        }
+      });
+      $(`#${dotsId}`).innerHTML = cards.map((_, index) =>
+        `<span class="carousel-dot${index === activeIndex ? " is-active" : ""}"></span>`).join("");
+      if (indexId) $(`#${indexId}`).textContent = `${activeIndex + 1} / ${total}`;
+    });
+  };
+}
+
+function stayNights(accommodation) {
+  const checkIn = Date.parse(`${accommodation.checkIn}T12:00:00`);
+  const checkOut = Date.parse(`${accommodation.checkOut}T12:00:00`);
+  if (Number.isNaN(checkIn) || Number.isNaN(checkOut)) return null;
+  return Math.max(Math.round((checkOut - checkIn) / 86400000), 0);
+}
+
+function stayCard(accommodation, index, total) {
+  const nights = stayNights(accommodation);
+  return `
+    <article class="flight-card stay-card" data-stay="${escapeHtml(accommodation.id)}">
+      <div class="flight-card__top"><span>STAY ${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}</span></div>
+      <div class="stay-card__name">${escapeHtml(accommodation.name)}</div>
+      <div class="stay-card__dates">
+        <span>入住 ${escapeHtml(formatCompactDate(accommodation.checkIn))}</span>
+        <i aria-hidden="true">→</i>
+        <span>退房 ${escapeHtml(formatCompactDate(accommodation.checkOut))}</span>
+        ${nights != null ? `<b>${nights} 晚</b>` : ""}
+      </div>
+      ${accommodation.note ? `<p class="stay-card__note">${escapeHtml(accommodation.note)}</p>` : ""}
+    </article>`;
+}
+
+function renderStay() {
+  const carousel = $("#stay-carousel");
+  if (!carousel) return;
+  const list = state.data.accommodations || [];
+  carousel.innerHTML = list.length
+    ? list.map((item, index) => stayCard(item, index, list.length)).join("")
+    : `<article class="flight-card flight-card--placeholder"><div class="flight-placeholder"><span class="flight-placeholder__eyebrow">资料待补充</span><h3>住宿信息待补充</h3><p>系统没有猜测或伪造缺失的住宿事实。</p></div></article>`;
+  $("#stay-index").textContent = `1 / ${Math.max(list.length, 1)}`;
+  bindSimpleCarousel("stay-carousel", "stay-dots", "stay-index", Math.max(list.length, 1));
+}
+
+function renderTickets() {
+  const carousel = $("#tickets-carousel");
+  if (!carousel) return;
+  const items = state.data.ticketPlanning?.items || [];
+  carousel.innerHTML = items.length
+    ? items.map((ticket, index) => ticketPlanCard(ticket, index, items.length)).join("")
+    : `<article class="flight-card flight-card--placeholder"><div class="flight-placeholder"><span class="flight-placeholder__eyebrow">资料待补充</span><h3>门票信息待补充</h3><p>确定要预约的景点后，在 trip-data.json 的 ticketPlanning.items 里补充名称、日期与购票要求，这里会自动生成卡片。</p></div></article>`;
+  $("#tickets-index").textContent = `1 / ${Math.max(items.length, 1)}`;
+  bindSimpleCarousel("tickets-carousel", "tickets-dots", "tickets-index", Math.max(items.length, 1));
+  carousel.onclick = (event) => {
+    const button = event.target.closest("[data-ticket-open]");
+    if (button) openTicketDialog(button.dataset.ticketOpen, button);
+  };
+}
+
+function ticketPlanCard(ticket, index, total) {
+  const purchased = isTicketPurchased(ticket);
+  return `
+    <article class="flight-card ticketplan-card${purchased ? " is-purchased" : ""}" data-plan-ticket="${escapeHtml(ticket.id)}">
+      <div class="flight-card__top"><span>TICKET ${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}</span></div>
+      <div class="stay-card__name">${escapeHtml(ticketTitle(ticket))}</div>
+      <div class="ticketplan-card__meta">
+        <span class="ticketplan-card__status">${purchased ? "已购票" : escapeHtml(ticketRequirement(ticket))}</span>
+        ${ticket.day ? `<span>DAY ${String(ticket.day).padStart(2, "0")}</span>` : ""}
+      </div>
+      ${ticketGuidance(ticket) ? `<p class="stay-card__note">${escapeHtml(ticketGuidance(ticket))}</p>` : ""}
+      <button type="button" class="schedule-ticket__open" data-ticket-open="${escapeHtml(ticket.id)}" aria-haspopup="dialog" aria-controls="ticket-dialog">查看详情</button>
+    </article>`;
+}
+
 function renderWeather() {
   const weather = state.data.weather || [];
   if (!weather.length) {
@@ -2023,6 +2242,8 @@ async function init() {
     if (moduleEnabled("itinerary")) renderTimeline();
     restoreWeatherCache();
     if (state.data.weather?.length) renderWeather();
+    renderStay();
+    renderTickets();
     if (moduleEnabled("driving")) renderRental();
     if (moduleEnabled("todo")) renderTravelPrep();
     renderFocus();
