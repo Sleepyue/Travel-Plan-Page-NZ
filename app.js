@@ -260,8 +260,11 @@ function renderFocus() {
   };
   paintDots(1);
 
-  /* 每次重绘都回到中间一张（最近一件）；左右滑动看上一件 / 下一件。 */
-  requestAnimationFrame(() => { carousel.scrollLeft = carousel.clientWidth; });
+  /* 每次重绘都回到中间一张（最近一件）；左右滑动看上一件 / 下一件。
+     双重 rAF：首帧时区块可能刚从 hidden 变可见，单次 rAF 里 clientWidth 仍为 0，
+     scrollLeft 赋值会被浏览器吞掉（实测首屏停在了「上一件」上）。 */
+  const resetToCurrentSlide = () => { carousel.scrollLeft = carousel.clientWidth; };
+  requestAnimationFrame(() => requestAnimationFrame(resetToCurrentSlide));
   let scheduled = false;
   carousel.onscroll = () => {
     if (scheduled || !carousel.clientWidth) return;
