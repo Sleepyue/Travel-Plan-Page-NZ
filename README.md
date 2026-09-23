@@ -94,13 +94,28 @@ git push origin main
 
 ### 3. 连接 Cloudflare Pages
 
-1. 打开 Cloudflare Dashboard → **Workers & Pages** → **Create application** → **Pages** → **Connect to Git**
-2. 授权 Cloudflare 访问这一个仓库，选择生产分支（`main`）
-3. 构建配置：**不要填构建命令**，这是一个无编译的静态站点
+⚠️ **必须建「Pages」项目，不要建「Worker」项目。** 这两条路在本仓库上不兼容：
+
+- 本仓库用的是 **Pages 约定**：`functions/` 目录 + `_headers`，Function 导出的是 `onRequest`（Pages Functions 签名）。
+- **Workers 项目不支持 `functions/` 目录**，也认不了 `onRequest`。Workers 要求 `wrangler.toml/jsonc` 里声明 `main` 入口 + `assets.directory`。
+- 若在 Workers 路径下建项目，构建会在 **Deploying** 阶段失败：`npx wrangler deploy` 找不到 Worker 入口和配置文件直接退出。前面的 Initializing / Cloning / Installing 全是绿色通过，**很有迷惑性**。
+
+正确步骤：
+
+1. Dashboard → **Workers & Pages** → **Create application** → 切到 **Pages** 标签 → **Import an existing Git repository**
+   （不要用 "Create application" 里默认展示的那个 Workers 表单）
+2. 选 `Sleepyue/Travel-Plan-Page-NZ` → **Begin setup**
+3. 构建配置：
    - Framework preset：`None`
-   - Build command：留空
-   - Build output directory：`/`（仓库根目录就是站点根目录）
-4. 保存并完成首次部署 → 打开 `*.pages.dev` 地址检查页面
+   - Production branch：`main`
+   - **Build command：`exit 0`** —— **不要留空**。Cloudflare 官方推荐无构建步骤时填 `exit 0`，且这是**启用 Pages Functions 的前提**；留空有可能拿不到 Functions。
+   - **Build output directory：`/`** —— 仓库根目录就是站点根目录
+4. **Save and Deploy**
+5. 部署成功后打开 `*.pages.dev` 地址，先确认页面能出。此时共享数据还读不到（D1 尚未创建），**这是预期的**，继续看第三、四节。
+
+> 如果已经建了一个失败的 Workers 项目，建议删掉（项目 → **Settings** → **Delete**），避免以后混淆。
+>
+> 排查：`*.pages.dev` 打开是 404 → 检查 Build output directory 是否为 `/`，仓库根目录必须有 `index.html`。
 
 之后每次 `git push` 到 `main` 都会自动重新部署。
 
