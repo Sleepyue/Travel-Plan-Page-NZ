@@ -472,6 +472,13 @@
           "placeId": "p_mtCook"
         },
         {
+          "id": "day4-helijump",
+          "time": "10:30",
+          "type": "attraction",
+          "text": "塔斯曼库克山直升机体验（25 分钟 · 含雪地/高山降落）",
+          "ticketIds": ["ticket-heli-tasman"]
+        },
+        {
           "id": "d4-mt",
           "time": "12:00",
           "type": "attraction",
@@ -649,6 +656,13 @@
         "奥马鲁"
       ],
       "schedule": [
+        {
+          "id": "day9-skydive",
+          "time": "06:00",
+          "type": "attraction",
+          "text": "NZONE 皇后镇高空跳伞（15,000 英尺）",
+          "ticketIds": ["ticket-skydive-nzone"]
+        },
         {
           "time": "07:00",
           "type": "check-out",
@@ -1302,7 +1316,6 @@
         "day": 4,
         "requirement": "advance-required",
         "purchaseStatus": "purchased",
-        "scheduleMatchTerms": ["Mount Cook"],
         "guidance": [
           "09-28 10:30 · 25 分钟直升机观光飞行，含雪地降落或高山降落（夏季）",
           "预订人 XIAO*** · 1 成人",
