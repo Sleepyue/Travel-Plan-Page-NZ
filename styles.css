@@ -80,7 +80,10 @@ img { display: block; max-width: 100%; }
 }
 .topbar nav a:active { color: var(--lake); }
 
-main { overflow: hidden; }
+/* overflow-x: clip 而非 overflow: hidden —— 两者都能裁掉水平溢出，但 hidden 会
+   把 main 变成滚动容器，使内部 .trip-nav 的 position: sticky 相对它定位而失效；
+   clip 不创建滚动容器，纵向仍是 visible，吸附才能相对视口生效。 */
+main { overflow-x: clip; }
 .hero, .section, .footer { width: min(100%, var(--content)); margin-inline: auto; }
 .hero { padding: 32px 18px 24px; min-height: 188px; display: flex; flex-direction: column; justify-content: flex-end; }
 .hero__eyebrow, .section-kicker {
@@ -396,18 +399,34 @@ main { overflow: hidden; }
 .todo-group__head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px 8px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
 .todo-group__name { font-weight: 800; font-size: 15px; letter-spacing: -0.01em; }
 .todo-group__count { font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; color: var(--muted); }
-.todo-item { min-height: 54px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.todo-item { min-height: 54px; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
 .todo-item__main { min-width: 0; min-height: 54px; padding: 6px 0; display: flex; align-items: center; gap: 10px; }
 .todo-item label { min-width: 0; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .todo-item input { position: absolute; opacity: 0; pointer-events: none; }
 .todo-item input:focus-visible + .todo-check { outline: 2px solid var(--lake); outline-offset: 2px; }
 /* 必带类 / 衣物类 are packed per person: one checkbox per traveller, side by side. */
-.todo-persons { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
-.todo-person { min-height: 40px; padding: 0 9px 0 3px; gap: 6px !important; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.72); }
-.todo-person.is-checked { border-color: var(--forest); background: #f1f7f0; }
-.todo-person.is-checked .todo-check { border-color: var(--forest); color: white; background: var(--forest); }
-.todo-person__name { max-width: 58px; color: var(--muted); font-size: 10px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.todo-person.is-checked .todo-person__name { color: #3f6347; }
+/* 责任人视角：切到某人时只列他负责的 + 「共同」的项，按钮上直接给完成进度。 */
+.todo-owners { margin: 14px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.todo-owners button { min-height: 52px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.72); color: var(--muted); cursor: pointer; transition: border-color .15s ease, background .15s ease, color .15s ease; }
+.todo-owners button[aria-pressed="true"] { border-color: var(--ink); color: var(--ink); background: #fff; }
+.todo-owner-tab__name { max-width: 100%; font-size: 12px; font-weight: 760; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-owner-tab__count { font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .05em; color: var(--muted); }
+
+/* 一行只有一个勾选框。两人各一份的项在「全部」视角显示只读进度，
+   切到具体责任人才出现勾选框——取代原来并排的两个框。 */
+.todo-item .todo-box { flex: 0 0 auto; min-height: 40px; padding: 0 9px 0 3px; gap: 6px !important; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.72); }
+.todo-item .todo-box.is-checked { border-color: var(--forest); background: #f1f7f0; }
+.todo-item .todo-box.is-checked .todo-check { border-color: var(--forest); color: white; background: var(--forest); }
+.todo-box__name { max-width: 58px; color: var(--muted); font-size: 10px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-item .todo-box.is-checked .todo-box__name { color: #3f6347; }
+.todo-pair { flex: 0 0 auto; min-width: 46px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; border: 1px dashed #b9c6c3; border-radius: 9px; color: var(--muted); font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.todo-pair.is-complete { border-style: solid; border-color: var(--forest); color: #3f6347; background: #f1f7f0; }
+
+/* 每项的责任人选择器 */
+.todo-item .todo-owner { flex: 0 0 auto; gap: 4px !important; cursor: default; }
+.todo-owner__label { display: none; }
+.todo-owner select { min-height: 34px; max-width: 92px; padding: 0 6px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.86); color: var(--ink); font: inherit; font-size: 11px; cursor: pointer; }
+.todo-owner select:focus-visible { outline: 2px solid var(--lake); outline-offset: 1px; }
 .todo-group__hint { margin: -2px 0 10px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .todo-check { width: 22px; height: 22px; flex: 0 0 22px; border: 1.5px solid #93a5a2; border-radius: 7px; color: transparent; display: grid; place-items: center; font-size: 12px; }
 .todo-text { min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
@@ -415,6 +434,15 @@ main { overflow: hidden; }
 .todo-item.is-complete .todo-text { color: #87928f; text-decoration: line-through; }
 .todo-delete { min-width: 44px; min-height: 44px; padding: 0; border: 0; color: #9a7062; background: transparent; cursor: pointer; font-size: 10px; }
 .todo-empty { margin: 0; padding: 22px 0 8px; color: var(--muted); text-align: center; font-size: 11px; }
+
+/* 窄屏下勾选框 + 责任人下拉 + 删除三个控件会挤，收起名字、压窄下拉。 */
+@media (max-width: 560px) {
+  .todo-item { gap: 6px; }
+  .todo-box__name { display: none; }
+  .todo-item .todo-box { padding: 0 6px 0 3px; }
+  .todo-owner select { max-width: 70px; padding: 0 4px; font-size: 10px; }
+  .todo-owners button { min-height: 48px; }
+}
 
 @media (min-width: 700px) {
   .topbar { padding-inline: max(24px, calc((100vw - var(--content)) / 2)); }
@@ -590,3 +618,124 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
   .topbar nav a { padding: 0 4px; }
   .topbar nav { gap: 0; }
 }
+
+/* ===== 旅行信息内部栏目导航（2026-09-23：由顶栏弹出菜单改为页内常驻导航条）=====
+   常驻在旅行信息页顶部，向下滚动时吸附在顶栏下方；顺序严格对应各模块在页面里
+   从上到下的位置（提醒 → 航班 → 路线 → 行程 → 天气 → 自驾）。 */
+.trip-nav {
+  position: sticky;
+  top: calc(48px + var(--safe-top));
+  z-index: 15;
+  border-bottom: 1px solid var(--line);
+  background: rgba(243, 246, 242, .95);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.trip-nav__inner {
+  width: min(100%, var(--content));
+  margin-inline: auto;
+  padding: 0 18px;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.trip-nav__inner::-webkit-scrollbar { display: none; }
+.trip-nav a {
+  flex: 0 0 auto;
+  min-height: 46px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 720;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  transition: color .15s ease, border-color .15s ease;
+}
+.trip-nav a:hover { color: var(--ink); }
+/* scrollspy 标记当前所在栏目 */
+.trip-nav a[aria-current="true"] { color: var(--ink); border-bottom-color: var(--lake); }
+
+/* 顶栏「旅行信息」：从弹出菜单改为普通链接（栏目导航移到页内 .trip-nav）。 */
+.topbar .primary-navigation__travel {
+  position: relative;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 680;
+}
+.topbar .primary-navigation__travel[aria-current="page"] { color: var(--ink); }
+.topbar .primary-navigation__travel[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--lake);
+}
+
+@media (max-width: 420px) {
+  .topbar .primary-navigation__travel { padding-inline: 5px; font-size: 11px; }
+  .topbar .primary-navigation__travel[aria-current="page"]::after { left: 5px; right: 5px; }
+  .trip-nav__inner { padding-inline: 12px; }
+  .trip-nav a { padding: 0 9px; font-size: 12px; }
+}
+
+/* ===== 航班卡片：单次航班的编辑入口与表单（2026-09-23）===== */
+.flight-card__edit { margin-top: 12px; display: grid; gap: 10px; }
+.flight-edit-toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+.flight-edit-toggle { min-height: 36px; padding: 0 11px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.8); color: var(--muted); cursor: pointer; font-size: 11px; font-weight: 720; transition: border-color .15s ease, color .15s ease; }
+.flight-edit-toggle:hover { border-color: var(--lake); color: var(--lake); }
+.flight-edit-toggle.is-active { border-color: var(--ink); color: var(--ink); background: #fff; }
+.flight-edit-toggle i { font-style: normal; padding: 1px 5px; border-radius: 999px; background: #f6e2d8; color: #8f492e; font-size: 9px; font-weight: 760; }
+
+.flight-editor { padding: 14px; display: grid; gap: 12px; border: 1px solid var(--line); border-radius: var(--radius-md); background: rgba(255,255,255,.92); }
+.flight-editor__head { margin: 0; font-size: 12px; font-weight: 780; }
+.flight-editor__number, .flight-editor__side label { display: grid; gap: 4px; }
+.flight-editor label > span { color: var(--muted); font-size: 10px; font-weight: 700; }
+.flight-editor input { min-height: 38px; padding: 0 9px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; }
+.flight-editor input:focus { border-color: var(--lake); box-shadow: 0 0 0 3px rgba(40,123,144,.1); outline: none; }
+.flight-editor__sides { display: grid; gap: 12px; }
+.flight-editor__side { margin: 0; padding: 10px 12px 12px; display: grid; gap: 8px; border: 1px solid var(--line); border-radius: 12px; }
+.flight-editor__side legend { padding: 0 6px; color: var(--muted); font-size: 10px; font-weight: 760; letter-spacing: .06em; }
+.flight-editor__actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.flight-editor__actions button { min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--lake); color: #fff; cursor: pointer; font-size: 12px; font-weight: 740; }
+.flight-editor__actions button[type="button"] { background: transparent; border: 1px solid var(--line); color: var(--muted); }
+.flight-editor__actions .flight-editor__reset { margin-right: auto; border-color: #e8c8b8; color: #9a7062; }
+
+@media (min-width: 560px) {
+  .flight-editor__sides { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .flight-editor { padding: 12px; }
+  .flight-editor__actions button { flex: 1 1 auto; }
+}
+
+/* ===== 「行程提醒」里的完成勾选（2026-09-23）=====
+   勾一下即把当前条目写入 completed，并自动前进到下一项；卡片是深色底，配色随之调整。 */
+.focus-card__actions { margin-top: 12px; }
+.focus-complete { display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 0 16px 0 12px; border-radius: 999px; background: rgba(255,255,255,.14); cursor: pointer; }
+.focus-complete input { position: absolute; opacity: 0; pointer-events: none; }
+.focus-complete__box { width: 22px; height: 22px; flex: 0 0 22px; display: grid; place-items: center; border: 1.5px solid #9fd0d8; border-radius: 7px; color: transparent; font-size: 12px; transition: background .15s ease, color .15s ease; }
+.focus-complete input:checked + .focus-complete__box { background: #9fd0d8; color: #14313a; }
+.focus-complete input:focus-visible + .focus-complete__box { outline: 2px solid #9fd0d8; outline-offset: 2px; }
+.focus-complete__text { color: #eef7f8; font-size: 12px; font-weight: 740; }
+
+/* ===== 每日天气：手动更新（2026-09-23）===== */
+.weather-toolbar { margin: 0 0 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.weather-refresh { min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--lake); color: #fff; cursor: pointer; font-size: 12px; font-weight: 740; transition: background .15s ease, opacity .15s ease; }
+.weather-refresh:hover:not(:disabled) { background: #236d80; }
+.weather-refresh:disabled { opacity: .62; cursor: progress; }
+.weather-note { color: var(--muted); font-size: 11px; }
+.weather-note.is-error { color: var(--warning); }

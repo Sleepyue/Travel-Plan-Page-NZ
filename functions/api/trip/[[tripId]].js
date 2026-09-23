@@ -9,6 +9,7 @@ const table = {
   todos: "trip_todos",
   tickets: "trip_tickets",
   itinerary: "trip_itinerary",
+  flights: "trip_flights",
   diningRestaurants: "dining_restaurants",
   diningRecords: "dining_records"
 };
@@ -19,6 +20,10 @@ const schema = {
   trip_itinerary: {
     table: "CREATE TABLE IF NOT EXISTS trip_itinerary (id TEXT NOT NULL, trip_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (trip_id, id))",
     index: "CREATE INDEX IF NOT EXISTS idx_trip_itinerary_trip ON trip_itinerary(trip_id, created_at)"
+  },
+  trip_flights: {
+    table: "CREATE TABLE IF NOT EXISTS trip_flights (id TEXT NOT NULL, trip_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (trip_id, id))",
+    index: "CREATE INDEX IF NOT EXISTS idx_trip_flights_trip ON trip_flights(trip_id, created_at)"
   }
 };
 
@@ -34,6 +39,7 @@ async function readSnapshot(db, tripId, collections) {
     todos: [],
     tickets: [],
     itinerary: [],
+    flights: [],
     diningRestaurants: [],
     diningRecords: [],
     updatedAt: new Date().toISOString()

@@ -5,13 +5,20 @@
 
 - 静态资源：HTML / CSS / JS，无构建步骤
 - 共享数据：`functions/api/trip/[[tripId]].js`（Cloudflare Pages Function）+ D1
-- 共享范围：每日行程（itinerary）、行前准备（todo）、行程票券（ticket）、记账（ledger）、餐饮（dining）
+- 共享范围：每日行程（itinerary）、行前准备（todo）、行程票券（ticket）、航班信息（flights）、记账（ledger）、餐饮（dining）
 - 未列入共享范围的内容（如记账的币种偏好）仍只存在各自浏览器里
 
 功能要点：
 
 - **四个同级大模块**：旅行信息 / 行前准备 / 餐饮 / 记账，顶栏直接切换（`data-site-view` + hash 路由）。
   行前准备已从「旅行信息」中独立出来，可直接深链访问 `#prep`。
+- **旅行信息页内导航条**：常驻在页面顶部并按各模块从上到下的顺序排列（提醒 / 航班 / 路线 / 行程 / 天气 / 自驾），
+  向下滚动时吸附在顶栏下方，并高亮当前所在栏目。
+- **行程提醒**可直接勾选完成，与「每日行程」写的是同一条记录，两边双向同步。
+- **航班行程**支持逐段编辑（航班号、出发/到达的机场、日期、时间），改动同样多端同步，可一键还原为原始信息。
+- **行前准备**每项带「责任人」下拉（第一个同行人 / 第二个同行人 / 共同）。标为「共同」的项两人各带一份：
+  「全部」视角下显示两份各自的完成进度，切到具体责任人才勾自己那份；另有按责任人查看的切换栏。
+- **每日天气**可点「更新天气」拉取最新预报（数据源 Open-Meteo，免费且无需密钥），结果按 3 小时缓存。
 - **每日行程**可多端编辑：改时间 / 内容 / 类型、新增条目、删除条目、逐条标记「已完成」，
   卡片上显示 `已完成 / 总数`。每条改动单独成一条记录，两个人同时改不同条目不会互相覆盖。
 - **行前准备**的「必带类」「衣物类」是每人一份，每行给出两个勾选框（人名取自记账模块的
@@ -145,6 +152,7 @@ git push origin main
    | 2 | `migrations/0002_dining_tables.sql` | `dining_restaurants`、`dining_records` | ✅ |
    | 3 | `migrations/0003_seed_pretrip_todos.sql` | 把 153 条行前准备灌入 `trip_todos` | 可选 |
    | 4 | `migrations/0004_itinerary_table.sql` | `trip_itinerary`（每日行程的多端编辑） | ✅ |
+   | 5 | `migrations/0005_flights_table.sql` | `trip_flights`（航班编辑的覆盖层） | ✅ |
 
    全部都是 `CREATE TABLE IF NOT EXISTS` / `ON CONFLICT DO NOTHING`，可以安全重复执行。
 
@@ -165,6 +173,7 @@ git push origin main
    npx wrangler d1 execute <数据库名> --remote --file=./migrations/0001_shared_trip_data.sql
    npx wrangler d1 execute <数据库名> --remote --file=./migrations/0002_dining_tables.sql
    npx wrangler d1 execute <数据库名> --remote --file=./migrations/0004_itinerary_table.sql
+   npx wrangler d1 execute <数据库名> --remote --file=./migrations/0005_flights_table.sql
    ```
 
 ---
@@ -268,7 +277,7 @@ styles.css                 主样式
 app.js                     主逻辑（行程、地图、todo、此刻关注）
 ledger.css / ledger.js     记账模块
 dining.css / dining.js     餐饮模块
-site-navigation.js         旅行信息 / 行前准备 / 餐饮 / 记账 四视图切换
+site-navigation.js         旅行信息 / 行前准备 / 餐饮 / 记账 四视图切换 + 页内栏目导航与滚动高亮
 runtime-storage.js         localStorage / D1 双适配器
 overview-map.js route-ui.js ticket-pdf-preview.js
 trip-data.json             全部行程数据（config / days / accommodations / ...）

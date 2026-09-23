@@ -15,7 +15,7 @@
     "persistence": {
       "mode": "d1",
       "apiBase": "/api/trip",
-      "sharedCollections": ["todos", "tickets", "itinerary", "ledger", "dining"]
+      "sharedCollections": ["todos", "tickets", "itinerary", "flights", "ledger", "dining"]
     }
   },
   "metadata": {
@@ -878,919 +878,1072 @@
         "id": "pack001",
         "text": "耳机",
         "completed": false,
-        "category": "0.随身物品"
+        "category": "0.随身物品",
+        "owner": "p1"
       },
       {
         "id": "pack002",
         "text": "迷你雨伞",
         "completed": false,
-        "category": "0.随身物品"
+        "category": "0.随身物品",
+        "owner": "p1"
       },
       {
         "id": "pack003",
         "text": "充电宝",
         "completed": false,
-        "category": "0.随身物品"
+        "category": "0.随身物品",
+        "owner": "p1"
       },
       {
         "id": "pack004",
         "text": "Type C充电线*5",
         "completed": false,
-        "category": "0.随身物品"
+        "category": "0.随身物品",
+        "owner": "p1"
       },
       {
         "id": "pack005",
         "text": "纸巾1包",
         "completed": false,
-        "category": "0.随身物品"
+        "category": "0.随身物品",
+        "owner": "p1"
       },
       {
         "id": "pack006",
         "text": "湿巾1包",
         "completed": false,
-        "category": "0.随身物品"
+        "category": "0.随身物品",
+        "owner": "p1"
       },
       {
         "id": "pack007",
         "text": "护照",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack008",
         "text": "信用卡（VISA+AMERICAN EXPRESS",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack009",
         "text": "新西兰币",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack010",
         "text": "人民币（备用）",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack011",
         "text": "港币（备用）",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack012",
         "text": "银行卡（银联）",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack013",
         "text": "八达通",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack014",
         "text": "身份证",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack015",
         "text": "小钱包",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p1"
       },
       {
         "id": "pack016",
         "text": "纸巾1包",
         "completed": false,
-        "category": "车载物品"
+        "category": "3.车载物品",
+        "owner": "p1"
       },
       {
         "id": "pack017",
         "text": "湿巾1包",
         "completed": false,
-        "category": "车载物品"
+        "category": "3.车载物品",
+        "owner": "p1"
       },
       {
         "id": "pack018",
         "text": "数据线+转换头",
         "completed": false,
-        "category": "车载物品"
+        "category": "3.车载物品",
+        "owner": "p1"
       },
       {
         "id": "pack019",
         "text": "垃圾袋",
         "completed": false,
-        "category": "车载物品"
+        "category": "3.车载物品",
+        "owner": "p1"
       },
       {
         "id": "pack020",
         "text": "伞",
         "completed": false,
-        "category": "车载物品"
+        "category": "3.车载物品",
+        "owner": "p1"
       },
       {
         "id": "pack021",
         "text": "备用鞋&袜子",
         "completed": false,
-        "category": "车载物品"
+        "category": "3.车载物品",
+        "owner": "p1"
       },
       {
         "id": "pack022",
         "text": "杯子",
         "completed": false,
-        "category": "车载物品"
+        "category": "3.车载物品",
+        "owner": "p1"
       },
       {
         "id": "pack023",
         "text": "手机支架",
         "completed": false,
-        "category": "车载物品"
+        "category": "3.车载物品",
+        "owner": "p1"
       },
       {
         "id": "pack024",
         "text": "护照",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack025",
         "text": "港澳通行证及签注",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack026",
         "text": "身份证",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack027",
         "text": "信用卡（VISA+AMERICAN EXPRESS）（贴上密码）（记得锁卡）",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack028",
         "text": "新西兰币",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack029",
         "text": "港币（备用）",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack030",
         "text": "银行卡（银联）",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack031",
         "text": "参与汇率优惠及返利活动",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack032",
         "text": "Applepay",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack033",
         "text": "八达通",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack034",
         "text": "小钱包",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack035",
         "text": "取卡针&空卡槽一个",
         "completed": false,
-        "category": "1.必带类"
+        "category": "1.必带类",
+        "owner": "p2"
       },
       {
         "id": "pack036",
         "text": "签证打印版",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack037",
         "text": "驾照原件+翻译件",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack038",
         "text": "租车确认单+保险单",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack039",
         "text": "机票确认单",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack040",
         "text": "住宿确认单",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack041",
         "text": "NZTD申报",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack042",
         "text": "香港流量1天*2",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack043",
         "text": "新西兰电话卡",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack044",
         "text": "申报物品清单",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack045",
         "text": "Google Maps 离线地图",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack046",
         "text": "旅行保险",
         "completed": false,
-        "category": "2.准备类"
+        "category": "2.准备类",
+        "owner": "p1"
       },
       {
         "id": "pack047",
         "text": "厚外套",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack048",
         "text": "冲锋衣",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack049",
         "text": "内搭/毛衣",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack050",
         "text": "裤子",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack051",
         "text": "裙子",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack052",
         "text": "安全裤",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack053",
         "text": "秋裤",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack054",
         "text": "袜子",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack055",
         "text": "鞋子",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack056",
         "text": "内衣/胸贴",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack057",
         "text": "内裤",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack058",
         "text": "睡衣",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack059",
         "text": "泳衣",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack060",
         "text": "帽子",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack061",
         "text": "围巾",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack062",
         "text": "手套",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack063",
         "text": "防水鞋套",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack064",
         "text": "墨镜及眼镜盒",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack065",
         "text": "拖鞋",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack066",
         "text": "娃娃",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack067",
         "text": "挂件",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack068",
         "text": "背包",
         "completed": false,
-        "category": "3.衣物类"
+        "category": "4.衣物类",
+        "owner": "both"
       },
       {
         "id": "pack069",
         "text": "化妆包",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack070",
         "text": "卸妆油",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack071",
         "text": "假睫毛",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack072",
         "text": "隐形眼镜",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack073",
         "text": "隐形眼镜镊子",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack074",
         "text": "香水",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack075",
         "text": "护手霜",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack076",
         "text": "唇膏",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack077",
         "text": "防晒霜",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack078",
         "text": "卫生巾",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack079",
         "text": "发圈/发卡",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack080",
         "text": "刘海夹",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack081",
         "text": "牙刷",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack082",
         "text": "牙刷盒",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack083",
         "text": "漱口水",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack084",
         "text": "牙膏",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack085",
         "text": "梳子",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack086",
         "text": "洗发水",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack087",
         "text": "沐浴露",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack088",
         "text": "护发素",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack089",
         "text": "护发精油",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack090",
         "text": "洗面奶",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack091",
         "text": "干发帽",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack092",
         "text": "一次性浴巾（睿带（袋装）",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack093",
         "text": "洗脸巾（睿带",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack094",
         "text": "一次性床单被套（2套）",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack095",
         "text": "身体乳",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack096",
         "text": "面膜",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack097",
         "text": "指甲剪",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack098",
         "text": "剪刀",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack099",
         "text": "垃圾袋（睿带",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack100",
         "text": "车载垃圾袋（睿带",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack101",
         "text": "牙线",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack102",
         "text": "口罩",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack103",
         "text": "雨伞",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack104",
         "text": "太阳伞",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack105",
         "text": "透明雨伞",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack106",
         "text": "小包纸巾",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack107",
         "text": "日用纸巾",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack108",
         "text": "鼻炎纸巾",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack109",
         "text": "纯水湿巾",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack110",
         "text": "酒精湿巾",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack111",
         "text": "封口机/夹子",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack112",
         "text": "密封袋",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack113",
         "text": "饮水杯&吸管",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack114",
         "text": "车载颈枕（睿带",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack115",
         "text": "脏衣袋",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack116",
         "text": "衣架*4（睿带",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack117",
         "text": "洗衣液",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack118",
         "text": "剃须刀",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack119",
         "text": "电吹风（配件）",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack120",
         "text": "电脑",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack121",
         "text": "ipad",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack122",
         "text": "耳机",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack123",
         "text": "充电宝（带标识）",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack124",
         "text": "转换头",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack125",
         "text": "排插（睿带",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack126",
         "text": "充电头（睿带",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack127",
         "text": "数据线（电脑、手机、lightning、手表、车载充电线）",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack128",
         "text": "车载手机支架",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack129",
         "text": "车载充电器（点烟器转usb）",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack130",
         "text": "手机壳",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack131",
         "text": "清洁布",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack132",
         "text": "钢化膜",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack133",
         "text": "烧水杯",
         "completed": false,
-        "category": "4.日用类"
+        "category": "5.日用类",
+        "owner": "p1"
       },
       {
         "id": "pack134",
         "text": "咖啡/茶叶/抹茶",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack135",
         "text": "蒜粉/烧烤料",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack136",
         "text": "大餐救星",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack137",
         "text": "感冒药（999+小柴胡+布洛芬+奥司他韦2颗）",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack138",
         "text": "清火药",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack139",
         "text": "芥末（睿带",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack140",
         "text": "健胃消食片（睿带",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack141",
         "text": "腹泻药（睿带",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack142",
         "text": "创口贴（睿带",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack143",
         "text": "双飞人（睿带",
         "completed": false,
-        "category": "5.食品及药品类"
+        "category": "6.食品及药品类",
+        "owner": "p1"
       },
       {
         "id": "pack144",
         "text": "A7M3+28-200mm",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack145",
         "text": "24GM镜头",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack146",
         "text": "GR3X及备用电池",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack147",
         "text": "Osmo Pocket 4P",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack148",
         "text": "无人机及遥控器【是否需要申报】",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack149",
         "text": "相机脚架",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack150",
         "text": "小脚架",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack151",
         "text": "拍立得&相纸",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack152",
         "text": "硬盘（睿需带",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       },
       {
         "id": "pack153",
         "text": "内存卡转换器（睿可带",
         "completed": false,
-        "category": "6.相机类"
+        "category": "7.相机类",
+        "owner": "p1"
       }
     ],
     "preparationsExplicitlyMentioned": [

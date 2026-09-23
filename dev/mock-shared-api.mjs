@@ -33,6 +33,7 @@ const TABLES = {
   todos: "trip_todos",
   tickets: "trip_tickets",
   itinerary: "trip_itinerary",
+  flights: "trip_flights",
   diningRestaurants: "dining_restaurants",
   diningRecords: "dining_records"
 };

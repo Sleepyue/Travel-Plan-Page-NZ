@@ -26,12 +26,13 @@ const has = (relative) => existsSync(path.join(repoRoot, relative));
 
 /* ---------- 1. trip-data.json parses and its config is coherent ---------- */
 const MODULE_NAMES = ["flights", "overview", "itinerary", "todo", "driving", "ledger"];
-const KNOWN_SHARED = new Set(["todos", "tickets", "itinerary", "ledger", "dining"]);
+const KNOWN_SHARED = new Set(["todos", "tickets", "itinerary", "flights", "ledger", "dining"]);
 /* sharedCollection -> module that must be enabled, and the record collections it maps to */
 const SHARED_REQUIREMENTS = {
   todos: { module: "todo", collections: ["todos"] },
   tickets: { module: "itinerary", collections: ["tickets"] },
   itinerary: { module: "itinerary", collections: ["itinerary"] },
+  flights: { module: "flights", collections: ["flights"] },
   ledger: { module: "ledger", collections: ["bills", "travelers"] },
   dining: { module: null, collections: ["diningRestaurants", "diningRecords"] }
 };

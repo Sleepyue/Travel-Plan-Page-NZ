@@ -14,33 +14,24 @@
   <meta property="og:description" content="2026-09-25 至 10-05 · 香港 ⇄ 奥克兰 · 南岛环线 11 天：行程、机票住宿、自驾安排与共同记账。">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary">
-  <link rel="stylesheet" href="styles.css?v=20260923-8">
+  <link rel="stylesheet" href="styles.css?v=20260923-10">
   <link rel="stylesheet" href="ledger.css?v=20260923-3">
   <link rel="stylesheet" href="dining.css?v=20260923-6">
   <script src="runtime-storage.js?v=20260923-8" defer></script>
   <script src="overview-map.js?v=20260910-2" defer></script>
   <script src="route-ui.js?v=20260910-2" defer></script>
-  <script src="app.js?v=20260923-9" defer></script>
+  <script src="app.js?v=20260923-11" defer></script>
   <script src="ticket-pdf-preview.js?v=20260910-2" defer></script>
   <script src="ledger.js?v=20260923-4" defer></script>
   <script src="dining.js?v=20260923-8" defer></script>
-  <script src="site-navigation.js?v=20260923-6" defer></script>
+  <script src="site-navigation.js?v=20260923-7" defer></script>
 </head>
 <body>
   <a class="skip-link" id="skip-link" href="#main">跳到主要内容</a>
   <header class="topbar" id="topbar">
     <a class="wordmark" id="wordmark" href="#top" aria-label="返回顶部"></a>
     <nav class="primary-navigation" aria-label="主要模块">
-      <details class="travel-navigation" id="travel-navigation" hidden>
-        <summary id="travel-navigation-trigger">旅行信息</summary>
-        <div class="travel-navigation-menu" role="menu" aria-label="旅行信息栏目">
-          <a href="#flights" role="menuitem" data-module="flights" hidden>航班</a>
-          <a href="#route" role="menuitem" data-module="overview" hidden>路线</a>
-          <a href="#itinerary" role="menuitem" data-module="itinerary" hidden>行程</a>
-          <a href="#drive" role="menuitem" data-module="driving" hidden>自驾</a>
-          <a href="#weather" role="menuitem">天气</a>
-        </div>
-      </details>
+      <a class="primary-navigation__travel" id="travel-navigation-link" href="#top">旅行信息</a>
       <a class="primary-navigation__prep" id="prep-navigation-link" href="#prep" data-module="todo" hidden>行前准备</a>
       <a class="primary-navigation__dining" id="dining-navigation-link" href="#dining">餐饮</a>
       <a class="primary-navigation__ledger" id="ledger-navigation-link" href="#ledger" data-module="ledger" hidden>记账</a>
@@ -53,6 +44,19 @@
       <h1 id="trip-title">正在载入旅程</h1>
       <p class="hero__date" id="trip-date"></p>
     </section>
+
+    <!-- 旅行信息内部的栏目导航：常驻在页首，下滑后吸附在顶栏下方。
+         顺序严格对应各模块在页面里从上到下的位置。 -->
+    <nav class="trip-nav" id="trip-nav" aria-label="旅行信息栏目">
+      <div class="trip-nav__inner">
+        <a href="#focus-card-section">提醒</a>
+        <a href="#flights" data-module="flights" hidden>航班</a>
+        <a href="#route" data-module="overview" hidden>路线</a>
+        <a href="#itinerary" data-module="itinerary" hidden>行程</a>
+        <a href="#weather">天气</a>
+        <a href="#drive" data-module="driving" hidden>自驾</a>
+      </div>
+    </nav>
 
     <section class="section focus-card-section" id="focus-card-section" aria-labelledby="focus-title" hidden>
       <div class="section-heading">
@@ -67,6 +71,13 @@
         <div class="focus-card__event" id="focus-event"></div>
         <div class="focus-card__sub" id="focus-sub"></div>
         <div class="focus-countdown" id="focus-countdown" aria-live="polite"></div>
+        <div class="focus-card__actions">
+          <label class="focus-complete">
+            <input type="checkbox" id="focus-complete">
+            <span class="focus-complete__box" aria-hidden="true">✓</span>
+            <span class="focus-complete__text">标记完成</span>
+          </label>
+        </div>
       </div>
     </section>
 
@@ -113,6 +124,10 @@
         </div>
         <span class="soft-label" id="weather-range"></span>
       </div>
+      <div class="weather-toolbar">
+        <button type="button" class="weather-refresh" id="weather-refresh">更新天气</button>
+        <span class="weather-note" id="weather-note" role="status" aria-live="polite"></span>
+      </div>
       <div class="weather-grid" id="weather-grid"></div>
       <p class="route-caption">天气为出行前预报，出行当天请以当地实时天气为准。</p>
     </section>
@@ -148,6 +163,7 @@
         <input id="todo-input" type="text" maxlength="80" placeholder="添加一项准备事项" aria-label="准备事项">
         <button type="submit">添加</button>
       </form>
+      <div class="todo-owners" id="todo-owners" role="group" aria-label="按责任人查看准备情况"></div>
       <div class="todo-filter-tabs" id="todo-filters" role="group" aria-label="按类型筛选准备事项"></div>
       <div class="todo-list" id="todo-list"></div>
     </section>

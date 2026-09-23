@@ -9,20 +9,30 @@ const state = {
   purchasedTickets: new Set(),
   todos: [],
   todoFilter: "all",
+  /* 责任人视角：all（全部）/ p1 / p2。切到某人时只列出他负责的和「共同」的项。 */
+  todoOwnerView: "all",
   prepNameListenerBound: false,
   /* Shared itinerary edits, one record per `${day}::${itemId}`. Authored
      days[].schedule in trip-data.json stays the baseline; these overlay it. */
   itinerary: [],
+  /* 航班覆盖层：trip-data.json 的 flights[] 是权威基线，这里按航班 id 存增量覆盖。
+     与 itinerary 同构：删掉记录即回到基线，因此不需要墓碑。 */
+  flights: [],
+  editingFlightId: null,
+  /* 天气基线（trip-data.json 原始预报）与上次更新时间：「更新天气」只改 state.data.weather，
+     反复点更新时始终以基线为起点，避免逐次叠加。 */
+  authoredWeather: null,
+  weatherUpdatedAt: null,
   focusTarget: null,
   focusFinished: false
 };
 
 const MODULE_NAMES = Object.freeze(["flights", "overview", "itinerary", "todo", "driving", "ledger"]);
-/* Note the mixed granularity: "todos"/"tickets"/"itinerary" name real record collections,
+/* Note the mixed granularity: "todos"/"tickets"/"itinerary"/"flights" name real record collections,
    while "ledger"/"dining" name whole modules whose tables ledger.js and dining.js own.
    The allowlist is validated verbatim against trip-data.json, so entries have to match
    exactly what that file declares. */
-const SHARED_COLLECTIONS = Object.freeze(["todos", "tickets", "itinerary", "ledger", "dining"]);
+const SHARED_COLLECTIONS = Object.freeze(["todos", "tickets", "itinerary", "flights", "ledger", "dining"]);
 
 function normalizeTripConfig(raw = {}) {
   if (!raw || typeof raw !== "object" || raw.schemaVersion !== "1.0.0") throw new Error("trip-data.json config.schemaVersion must be 1.0.0");
@@ -62,10 +72,10 @@ function applyModuleConfig() {
   document.querySelectorAll("[data-module]:not([data-site-view])").forEach((element) => {
     element.hidden = !moduleEnabled(element.dataset.module);
   });
-  /* 顶层「行前准备」入口与菜单项共用 todo 模块开关；统计可见项时应含无 data-module 的固定项（如「天气」）。 */
-  const visibleTravelLinks = [...document.querySelectorAll(".travel-navigation-menu a")].filter((link) => !link.hidden);
-  const travelNavigation = $("#travel-navigation");
-  if (travelNavigation) travelNavigation.hidden = visibleTravelLinks.length === 0;
+  /* 页内栏目导航（.trip-nav）：模块项由上面的通用逻辑处理；「提醒」跟随行程提醒卡片的
+     显隐。两个固定栏目（提醒 / 天气）没有 data-module，统计可见项时要一并算进去。 */
+  syncFocusNavLink();
+  const visibleTravelLinks = [...document.querySelectorAll(".trip-nav a")].filter((link) => !link.hidden);
   document.documentElement.dataset.persistence = state.config.persistence.mode;
 
   const hashModules = {
@@ -131,7 +141,7 @@ function preciseCountdownText(target, completionText = "已出发") {
 
 /* The 「此刻关注」card highlights the single nearest schedule item across the whole trip. */
 function dayUtcOffset(day) {
-  for (const flight of state.data.flights || []) {
+  for (const flight of mergedFlights()) {
     if (flight.departure?.date === day.date && flight.departure?.utcOffset) return flight.departure.utcOffset;
     if (flight.arrival?.date === day.date && flight.arrival?.utcOffset) return flight.arrival.utcOffset;
   }
@@ -165,6 +175,9 @@ function nextScheduleItem() {
   const text = String(chosen.item.text || "").trim();
   return {
     target: chosen.target,
+    /* 一并暴露 day / itemId，让「行程提醒」能写入与每日行程完全相同的那条记录。 */
+    day: chosen.day.day,
+    itemId: chosen.item.itemId,
     label: text || `DAY ${String(chosen.day.day).padStart(2, "0")}`,
     sub: `DAY ${String(chosen.day.day).padStart(2, "0")} · ${formatCompactDate(chosen.day.date)} ${chosen.item.time}`,
     remaining,
@@ -193,12 +206,20 @@ function updateFocusCountdown() {
   el.innerHTML = `${focusUnit(days, "天")}${focusUnit(hours, "时")}${focusUnit(minutes, "分")}${focusUnit(seconds, "秒")}`;
 }
 
+/* 「提醒」栏目与行程提醒卡片同显隐：卡片在没有下一项时会自己隐藏。 */
+function syncFocusNavLink() {
+  const link = document.querySelector('.trip-nav a[href="#focus-card-section"]');
+  const card = $("#focus-card-section");
+  if (link && card) link.hidden = card.hidden;
+}
+
 function renderFocus() {
   const card = $("#focus-card-section");
   if (!card) return;
   const next = nextScheduleItem();
-  if (!next) { card.hidden = true; state.focusTarget = null; return; }
+  if (!next) { card.hidden = true; state.focusTarget = null; syncFocusNavLink(); return; }
   card.hidden = false;
+  syncFocusNavLink();
   $("#focus-event").textContent = next.label;
   $("#focus-sub").textContent = next.sub;
   const remaining = $("#focus-remaining");
@@ -206,6 +227,30 @@ function renderFocus() {
   state.focusTarget = next.target;
   state.focusFinished = next.finished;
   updateFocusCountdown();
+
+  /* 与每日行程联动：在这里勾完成，等价于给同一条行程记录写入 completed。
+     用 onchange 赋值而非 addEventListener —— renderFocus 会被反复调用。 */
+  const box = $("#focus-complete");
+  if (box) {
+    box.checked = false;
+    box.disabled = false;
+    box.onchange = () => completeFocusItem(next.day, next.itemId);
+  }
+}
+
+/* 「行程提醒」的完成勾选：写入每日行程用的同一条记录，因此两个模块天然同步 ——
+   在提醒处勾选，每日行程对应条目立刻显示为已完成；反之亦然。 */
+function completeFocusItem(day, itemId) {
+  const entry = findItineraryEntry(day, itemId);
+  if (!entry) return;
+  saveItineraryRecord(day, itemId, {
+    time: entry.time,
+    text: entry.text,
+    type: entry.type,
+    completed: true
+  });
+  renderTimeline();
+  renderFocus();
 }
 
 function formatDate(dateString, includeYear = false) {
@@ -289,9 +334,64 @@ function renderHero() {
 }
 
 function journeyFlights(journeyId) {
-  return state.data.flights
+  return mergedFlights()
     .filter((flight) => flight.journeyId === journeyId)
     .sort((first, second) => first.sequence - second.sequence);
+}
+
+/* ===== 航班编辑：trip-data.json 的 flights[] 是基线，共享层按航班 id 存覆盖 ===== */
+
+function normalizeFlightRecord(raw) {
+  const id = String(raw?.id || "").trim().slice(0, 60);
+  if (!id) return null;
+  const record = { id };
+  if (typeof raw.flightNumber === "string") record.flightNumber = raw.flightNumber.trim().slice(0, 12);
+  for (const key of ["departure", "arrival"]) {
+    const side = raw?.[key];
+    if (!side || typeof side !== "object") continue;
+    const next = {};
+    if (typeof side.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(side.date.trim())) next.date = side.date.trim();
+    if (typeof side.time === "string" && /^\d{2}:\d{2}$/.test(side.time.trim())) next.time = side.time.trim();
+    if (typeof side.airportCode === "string" && side.airportCode.trim()) next.airportCode = side.airportCode.trim().toUpperCase().slice(0, 4);
+    if (typeof side.city === "string" && side.city.trim()) next.city = side.city.trim().slice(0, 24);
+    if (Object.keys(next).length) record[key] = next;
+  }
+  return record;
+}
+
+/* 基线 + 覆盖：departure / arrival 逐层合并（只改一个字段不会把同侧的其它字段冲掉），
+   其余字段整体替换。 */
+function mergedFlights() {
+  const overrides = new Map((state.flights || []).map((row) => [String(row.id), row]));
+  return (state.data?.flights || []).map((base) => {
+    const patch = overrides.get(String(base.id));
+    if (!patch) return base;
+    return {
+      ...base,
+      ...patch,
+      departure: { ...base.departure, ...(patch.departure || {}) },
+      arrival: { ...base.arrival, ...(patch.arrival || {}) }
+    };
+  });
+}
+
+function flightIsEdited(flightId) {
+  return (state.flights || []).some((row) => String(row.id) === String(flightId));
+}
+
+function saveFlightRecord(flightId, patch) {
+  const id = String(flightId);
+  const record = { id, ...patch };
+  const index = state.flights.findIndex((row) => String(row.id) === id);
+  if (index >= 0) state.flights[index] = record;
+  else state.flights.push(record);
+  saveSharedChange("flights", record).catch(console.error);
+}
+
+function resetFlightRecord(flightId) {
+  const id = String(flightId);
+  state.flights = state.flights.filter((row) => String(row.id) !== id);
+  saveSharedChange("flights", { id }, "delete").catch(console.error);
 }
 
 function journeyStatusAndTarget(flights) {
@@ -420,8 +520,43 @@ function flightCard(journey, index) {
           <strong>${escapeHtml(countdown)}</strong>
         </div>
       </div>
+      <div class="flight-card__edit">
+        <div class="flight-edit-toggles">${flights.map((flight) => `
+          <button type="button" class="flight-edit-toggle${state.editingFlightId === flight.id ? " is-active" : ""}" data-flight-edit="${escapeHtml(flight.id)}" aria-expanded="${state.editingFlightId === flight.id ? "true" : "false"}">
+            ✎ ${escapeHtml(flight.flightNumber)}${flightIsEdited(flight.id) ? "<i>已改</i>" : ""}
+          </button>`).join("")}
+        </div>
+        ${flights.map((flight) => state.editingFlightId === flight.id ? flightEditorMarkup(flight) : "").join("")}
+      </div>
     </article>
   `;
+}
+
+/* 单次航班的编辑表单：航班号 + 出发/到达两侧的机场与日期时间。
+   保存写入共享层覆盖记录，两台设备看到同一份，且各旅程的其它航班不受影响。 */
+function flightEditorMarkup(flight) {
+  const side = (key, label, value) => `
+        <fieldset class="flight-editor__side">
+          <legend>${escapeHtml(label)}</legend>
+          <label><span>机场代码</span><input name="${key}.airportCode" type="text" maxlength="4" value="${escapeHtml(value?.airportCode || "")}" required></label>
+          <label><span>日期</span><input name="${key}.date" type="date" value="${escapeHtml(value?.date || "")}" required></label>
+          <label><span>时间</span><input name="${key}.time" type="time" value="${escapeHtml(value?.time || "")}" required></label>
+          <label><span>城市</span><input name="${key}.city" type="text" maxlength="24" value="${escapeHtml(value?.city || "")}"></label>
+        </fieldset>`;
+  return `
+      <form class="flight-editor" data-flight-form="${escapeHtml(flight.id)}">
+        <p class="flight-editor__head">编辑航班 ${escapeHtml(flight.flightNumber || "")}</p>
+        <label class="flight-editor__number"><span>航班号</span><input name="flightNumber" type="text" maxlength="12" value="${escapeHtml(flight.flightNumber || "")}" required></label>
+        <div class="flight-editor__sides">
+          ${side("departure", "出发", flight.departure)}
+          ${side("arrival", "到达", flight.arrival)}
+        </div>
+        <div class="flight-editor__actions">
+          ${flightIsEdited(flight.id) ? `<button type="button" class="flight-editor__reset" data-flight-reset="${escapeHtml(flight.id)}">还原原始信息</button>` : ""}
+          <button type="button" data-flight-cancel>取消</button>
+          <button type="submit">保存</button>
+        </div>
+      </form>`;
 }
 
 function renderFlights() {
@@ -431,8 +566,10 @@ function renderFlights() {
   $("#flight-index").textContent = `1 / ${journeys.length}`;
 
   const carousel = $("#flight-carousel");
+  /* 编辑保存后需要重渲染卡片，所以这里一律用 on* 赋值而不是 addEventListener：
+     后者每重渲染一次就多挂一个监听器，滚动回调会成倍触发。 */
   let scheduled = false;
-  carousel.addEventListener("scroll", () => {
+  carousel.onscroll = () => {
     if (scheduled) return;
     scheduled = true;
     requestAnimationFrame(() => {
@@ -451,7 +588,54 @@ function renderFlights() {
       $("#flight-index").textContent = `${activeIndex + 1} / ${journeys.length}`;
       scheduled = false;
     });
-  }, { passive: true });
+  };
+
+  carousel.onclick = (event) => {
+    const editButton = event.target.closest("[data-flight-edit]");
+    if (editButton) {
+      const id = editButton.dataset.flightEdit;
+      state.editingFlightId = state.editingFlightId === id ? null : id;
+      renderFlights();
+      return;
+    }
+    if (event.target.closest("[data-flight-cancel]")) {
+      state.editingFlightId = null;
+      renderFlights();
+      return;
+    }
+    const resetButton = event.target.closest("[data-flight-reset]");
+    if (resetButton) {
+      resetFlightRecord(resetButton.dataset.flightReset);
+      state.editingFlightId = null;
+      renderFlights();
+    }
+  };
+
+  carousel.onsubmit = (event) => {
+    const form = event.target.closest("[data-flight-form]");
+    if (!form) return;
+    event.preventDefault();
+    const data = new FormData(form);
+    const read = (key) => String(data.get(key) || "").trim();
+    saveFlightRecord(form.dataset.flightForm, {
+      flightNumber: read("flightNumber").toUpperCase(),
+      departure: {
+        airportCode: read("departure.airportCode").toUpperCase(),
+        date: read("departure.date"),
+        time: read("departure.time"),
+        city: read("departure.city")
+      },
+      arrival: {
+        airportCode: read("arrival.airportCode").toUpperCase(),
+        date: read("arrival.date"),
+        time: read("arrival.time"),
+        city: read("arrival.city")
+      }
+    });
+    state.editingFlightId = null;
+    renderFlights();
+    updateFlightCountdowns();
+  };
 }
 
 function updateFlightCountdowns() {
@@ -1091,11 +1275,18 @@ function createRuntimeAdapters() {
     ? persistence.sharedCollections
     : ["todos", "tickets", "ledger"]);
   const tripId = state.data.metadata.tripId;
-  const enabledCollections = [
-    ...(moduleEnabled("todo") ? ["todos"] : []),
-    /* tickets and itinerary are both rendered by the itinerary module. */
-    ...(moduleEnabled("itinerary") ? ["tickets", "itinerary"] : [])
-  ];
+  /* 记录集合 → 启用它的模块开关。新增共享集合时必须在这里登记：漏登记的话
+     state.runtimeAdapters 里不会有它，写操作会被静默丢弃（只剩本地内存生效）。
+     tickets / itinerary 都由 itinerary 模块渲染，所以同属一个开关。 */
+  const COLLECTION_MODULES = {
+    todos: "todo",
+    tickets: "itinerary",
+    itinerary: "itinerary",
+    flights: "flights"
+  };
+  const enabledCollections = Object.entries(COLLECTION_MODULES)
+    .filter(([, moduleName]) => moduleEnabled(moduleName))
+    .map(([collection]) => collection);
   const localCollections = enabledCollections.filter((collection) => persistence.mode !== "d1" || !sharedCollections.has(collection));
   const d1Collections = enabledCollections.filter((collection) => persistence.mode === "d1" && sharedCollections.has(collection));
   const localAdapter = localCollections.length ? storage.createAdapter({ mode: "local", tripId, collections: localCollections }) : null;
@@ -1126,6 +1317,9 @@ async function loadSharedState() {
   state.todos = Array.isArray(todoSnapshot.todos) ? todoSnapshot.todos : [];
   state.itinerary = (Array.isArray(itinerarySnapshot.itinerary) ? itinerarySnapshot.itinerary : [])
     .map(normalizeItineraryRecord).filter(Boolean);
+  const flightSnapshot = snapshotFor("flights");
+  state.flights = (Array.isArray(flightSnapshot.flights) ? flightSnapshot.flights : [])
+    .map(normalizeFlightRecord).filter(Boolean);
   state.purchasedTickets = new Set((Array.isArray(ticketSnapshot.tickets) ? ticketSnapshot.tickets : []).filter((item) => item.completed).map((item) => item.id));
   const authoredTodos = state.data.preTrip?.todoItems || state.data.preTrip?.packingItems || [];
   const sourceById = new Map(authoredTodos.map((item) => [String(item.id || ""), item]));
@@ -1151,12 +1345,19 @@ async function loadSharedState() {
   const shouldSeedTodos = Boolean(todoAdapter) && !state.todos.length && authoredTodos.length > 0 && needsImport;
 
   if (shouldSeedTodos) {
-    const seedRecords = authoredTodos.map((item, index) => ({
-      id: String(item.id || `todo-initial-${index + 1}`),
-      text: String(item.text || item.title || "").trim(),
-      category: String(item.category || "其他"),
-      completed: Boolean(item.completed)
-    })).filter((item) => item.text);
+    const seedRecords = authoredTodos.map((item, index) => {
+      const category = String(item.category || "其他");
+      const owner = OWNER_SLOTS.includes(String(item.owner || ""))
+        ? String(item.owner)
+        : (isPerPersonCategory(category) ? "both" : "p1");
+      return {
+        id: String(item.id || `todo-initial-${index + 1}`),
+        text: String(item.text || item.title || "").trim(),
+        category,
+        completed: Boolean(item.completed),
+        owner
+      };
+    }).filter((item) => item.text);
     if (seedRecords.length) {
       // Chunked so one oversized request cannot fail the whole import. Every
       // record is an upsert keyed by its stable id, so a retry is idempotent.
@@ -1193,7 +1394,13 @@ async function loadSharedState() {
         if (remainder) text = remainder;
       }
       const category = src ? String(src.category || "其他") : (todo.category || "其他");
-      return { ...todo, text, category, completed: Boolean(todo.completed ?? (src && src.completed)) };
+      /* 分类以 trip-data.json 为权威（线上老数据的前缀是旧的：车载物品没编号、衣物类是 3.x），
+         客户端会一并纠正；但 **owner 是用户可改的**，必须优先保留共享层里的值，
+         否则用户在界面上改了责任人、刷新就被基线打回去了。 */
+      const owner = OWNER_SLOTS.includes(String(todo.owner || ""))
+        ? String(todo.owner)
+        : (src && OWNER_SLOTS.includes(String(src.owner || "")) ? String(src.owner) : "p1");
+      return { ...todo, text, category, owner, completed: Boolean(todo.completed ?? (src && src.completed)) };
     });
   }
 }
@@ -1206,17 +1413,19 @@ async function saveSharedChange(collection, value, op = "upsert") {
 
 function saveTodoState() { return Promise.all(state.todos.map((todo) => saveSharedChange("todos", todo))); }
 
-const TODO_CATEGORY_ORDER = ["0.随身物品", "1.必带类", "2.准备类", "车载物品", "3.衣物类", "4.日用类", "5.食品及药品类", "6.相机类", "其他"];
+const TODO_CATEGORY_ORDER = ["0.随身物品", "1.必带类", "2.准备类", "3.车载物品", "4.衣物类", "5.日用类", "6.食品及药品类", "7.相机类", "其他"];
 
-/* 必带类 and 衣物类 are packed per person — both travellers carry their own — so a
-   single shared tick cannot express the state. Those rows render one checkbox per
-   traveller and are only "done" when both are ticked. */
-const PER_PERSON_CATEGORIES = Object.freeze(["1.必带类", "3.衣物类"]);
+/* 责任人（owner）：
+   · p1 / p2 —— 指定的那个人负责，只有一个完成状态；
+   · both    —— 两人各带一份，切到谁的视角就勾谁的那份（各存一个状态）。
+   老记录没有 owner 字段，按旧的双人分类名兜底推断。 */
+const LEGACY_PER_PERSON_CATEGORIES = Object.freeze(["1.必带类", "3.衣物类", "4.衣物类"]);
 const PERSON_SLOTS = Object.freeze(["p1", "p2"]);
+const OWNER_SLOTS = Object.freeze(["p1", "p2", "both"]);
 const DEFAULT_PERSON_NAMES = Object.freeze(["我", "同行人"]);
 
 function isPerPersonCategory(category) {
-  return PER_PERSON_CATEGORIES.includes(String(category || ""));
+  return LEGACY_PER_PERSON_CATEGORIES.includes(String(category || ""));
 }
 
 /* Names come from the ledger's 同行人 list so the two modules agree on who is who.
@@ -1246,38 +1455,99 @@ function personSlotsFor(todo) {
   return Object.fromEntries(PERSON_SLOTS.map((slot) => [slot, Boolean(todo?.completed)]));
 }
 
+function ownerFor(todo) {
+  const raw = String(todo?.owner || "").trim();
+  if (OWNER_SLOTS.includes(raw)) return raw;
+  return isPerPersonCategory(todo?.category) ? "both" : "p1";
+}
+
+function ownerLabel(owner) {
+  if (owner === "both") return "共同";
+  return personNames()[owner === "p2" ? 1 : 0];
+}
+
 function todoCompleted(todo) {
-  if (!isPerPersonCategory(todo?.category)) return Boolean(todo?.completed);
+  if (ownerFor(todo) !== "both") return Boolean(todo?.completed);
   const slots = personSlotsFor(todo);
   return PERSON_SLOTS.every((slot) => slots[slot]);
 }
 
-function todoItemMarkup(todo, names) {
-  const perPerson = isPerPersonCategory(todo.category);
+/* 「全部」视角看整体；切到某个人时只看他自己那份（各带一份的物品两人分别勾）。 */
+function todoDoneInView(todo, view) {
+  if (ownerFor(todo) === "both" && view !== "all") return Boolean(personSlotsFor(todo)[view]);
+  return todoCompleted(todo);
+}
+
+function todoInView(todo, view) {
+  if (view === "all") return true;
+  const owner = ownerFor(todo);
+  return owner === view || owner === "both";
+}
+
+function todoOwnerStats(slot) {
+  const items = state.todos.filter((todo) => todoInView(todo, slot));
+  return { done: items.filter((todo) => todoDoneInView(todo, slot)).length, total: items.length };
+}
+
+function todoItemMarkup(todo, names, view) {
+  const owner = ownerFor(todo);
+  const perPerson = owner === "both";
   const done = todoCompleted(todo);
   const slots = personSlotsFor(todo);
   const partial = perPerson && !done && PERSON_SLOTS.some((slot) => slots[slot]);
-  const control = perPerson
-    ? `<div class="todo-persons">${PERSON_SLOTS.map((slot, index) => `
-        <label class="todo-person${slots[slot] ? " is-checked" : ""}" title="${escapeHtml(names[index])}">
-          <input type="checkbox" data-todo-person="${slot}" ${slots[slot] ? "checked" : ""} aria-label="${escapeHtml(names[index])}：${escapeHtml(todo.text)}">
-          <span class="todo-check" aria-hidden="true">✓</span>
-          <span class="todo-person__name">${escapeHtml(names[index])}</span>
-        </label>`).join("")}</div>`
-    : `<label class="todo-single">
-        <input type="checkbox" data-todo-single ${done ? "checked" : ""} aria-label="完成：${escapeHtml(todo.text)}">
+
+  /* 一行只有一个勾选框。「全部」视角下，两人各一份的项显示只读进度，
+     想勾选就切到具体责任人——这样就不会再回到"一行两个框"的老样子。 */
+  let control;
+  if (perPerson && view === "all") {
+    const ticked = PERSON_SLOTS.filter((slot) => slots[slot]).length;
+    control = `<span class="todo-pair${ticked === PERSON_SLOTS.length ? " is-complete" : ""}" title="两人各一份，切到具体责任人分别勾选">${ticked}/${PERSON_SLOTS.length}</span>`;
+  } else {
+    const checked = perPerson ? Boolean(slots[view]) : Boolean(todo.completed);
+    const who = perPerson ? names[view === "p2" ? 1 : 0] : "";
+    control = `<label class="todo-box${checked ? " is-checked" : ""}"${who ? ` title="${escapeHtml(who)}"` : ""}>
+        <input type="checkbox" data-todo-check ${checked ? "checked" : ""} aria-label="${escapeHtml(who || "完成")}：${escapeHtml(todo.text)}">
         <span class="todo-check" aria-hidden="true">✓</span>
+        ${who ? `<span class="todo-box__name">${escapeHtml(who)}</span>` : ""}
       </label>`;
+  }
+
+  const options = [["p1", names[0]], ["p2", names[1]], ["both", "共同"]]
+    .map(([value, label]) => `<option value="${value}"${value === owner ? " selected" : ""}>${escapeHtml(label)}</option>`).join("");
+
   return `
-    <div class="todo-item${done ? " is-complete" : ""}${partial ? " is-partial" : ""}${perPerson ? " is-per-person" : ""}" data-todo-id="${escapeHtml(todo.id)}">
+    <div class="todo-item${done ? " is-complete" : ""}${partial ? " is-partial" : ""}${perPerson ? " is-per-person" : ""}" data-todo-id="${escapeHtml(todo.id)}" data-owner="${owner}">
       <div class="todo-item__main">${control}<span class="todo-text">${escapeHtml(todo.text)}</span></div>
+      <label class="todo-owner" title="责任人"><span class="todo-owner__label">责任人</span>
+        <select data-todo-owner aria-label="责任人：${escapeHtml(todo.text)}">${options}</select>
+      </label>
       <button type="button" class="todo-delete" aria-label="删除：${escapeHtml(todo.text)}">删除</button>
     </div>`;
 }
 
+/* 责任人视角切换：按钮上直接给出各自的完成进度（需求②「按责任人展示准备情况」）。 */
+function renderTodoOwners() {
+  const container = $("#todo-owners");
+  if (!container) return;
+  const view = state.todoOwnerView || "all";
+  const names = personNames();
+  const tabs = [
+    ["all", "全部", { done: state.todos.filter(todoCompleted).length, total: state.todos.length }],
+    ["p1", names[0], todoOwnerStats("p1")],
+    ["p2", names[1], todoOwnerStats("p2")]
+  ];
+  container.innerHTML = tabs.map(([value, label, stat]) =>
+    `<button type="button" data-todo-view="${value}" aria-pressed="${view === value}">
+      <span class="todo-owner-tab__name">${escapeHtml(label)}</span>
+      <span class="todo-owner-tab__count">${stat.done} / ${stat.total}</span>
+    </button>`).join("");
+}
+
 function renderTodoList() {
+  const view = state.todoOwnerView || "all";
   const completed = state.todos.filter(todoCompleted).length;
   $("#todo-progress").textContent = `${completed} / ${state.todos.length}`;
+  renderTodoOwners();
   if (!state.todos.length) {
     $("#todo-list").innerHTML = `<p class="todo-empty">还没有准备事项，添加第一项吧。</p>`;
     return;
@@ -1285,6 +1555,7 @@ function renderTodoList() {
   const names = personNames();
   const groups = new Map();
   for (const todo of state.todos) {
+    if (!todoInView(todo, view)) continue;
     const cat = todo.category || "其他";
     if (!groups.has(cat)) groups.set(cat, []);
     groups.get(cat).push(todo);
@@ -1298,18 +1569,18 @@ function renderTodoList() {
   const visibleCats = filter === "all" ? orderedCats : orderedCats.filter((cat) => cat === filter);
   const html = visibleCats.map((cat) => {
     const items = groups.get(cat);
-    const done = items.filter(todoCompleted).length;
-    const perPerson = isPerPersonCategory(cat);
-    return `<div class="todo-group${perPerson ? " is-per-person" : ""}">
+    const done = items.filter((todo) => todoDoneInView(todo, view)).length;
+    const hasPair = items.some((todo) => ownerFor(todo) === "both");
+    return `<div class="todo-group${hasPair ? " is-per-person" : ""}">
       <div class="todo-group__head">
         <span class="todo-group__name">${escapeHtml(cat)}</span>
         <span class="todo-group__count">${done} / ${items.length}</span>
       </div>
-      ${perPerson ? `<p class="todo-group__hint">两人各自带一份，左右两个勾选框分别对应 ${names.map((name) => escapeHtml(name)).join(" 和 ")}。</p>` : ""}
-      ${items.map((todo) => todoItemMarkup(todo, names)).join("")}
+      ${hasPair ? `<p class="todo-group__hint">标为「共同」的项两人各带一份，切到「${names.map((name) => escapeHtml(name)).join("」或「")}」左右各自勾选自己那份。</p>` : ""}
+      ${items.map((todo) => todoItemMarkup(todo, names, view)).join("")}
     </div>`;
   }).join("");
-  $("#todo-list").innerHTML = html;
+  $("#todo-list").innerHTML = html || `<p class="todo-empty">该责任人名下暂无准备事项。</p>`;
 }
 
 function renderTodoFilters() {
@@ -1341,24 +1612,54 @@ function renderTodoFilters() {
 function renderTravelPrep() {
   renderTodoFilters();
   renderTodoList();
+  const ownersBar = $("#todo-owners");
+  if (ownersBar) ownersBar.onclick = (event) => {
+    const button = event.target.closest("[data-todo-view]");
+    if (!button) return;
+    state.todoOwnerView = button.dataset.todoView;
+    renderTodoList();
+  };
   $("#todo-form").onsubmit = (event) => {
     event.preventDefault();
     const input = $("#todo-input");
     const text = input.value.trim();
     if (!text) return;
-    state.todos.push({ id: `todo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, category: "其他", completed: false });
+    /* 新增项默认归当前正在看的那个责任人，省一次切换。 */
+    const owner = state.todoOwnerView === "p2" ? "p2" : "p1";
+    state.todos.push({ id: `todo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, category: "其他", completed: false, owner });
     input.value = "";
     saveSharedChange("todos", state.todos.at(-1)).catch(console.error);
     renderTodoList();
   };
   $("#todo-list").onchange = (event) => {
     const item = event.target.closest("[data-todo-id]");
-    if (!item || !event.target.matches("input[type='checkbox']")) return;
+    if (!item) return;
     const todo = state.todos.find((entry) => entry.id === item.dataset.todoId);
     if (!todo) return;
-    const personSlot = event.target.dataset.todoPerson;
-    if (personSlot) {
-      const slots = { ...personSlotsFor(todo), [personSlot]: event.target.checked };
+
+    if (event.target.matches("[data-todo-owner]")) {
+      const wasPair = ownerFor(todo) === "both";
+      const requested = event.target.value;
+      todo.owner = OWNER_SLOTS.includes(requested) ? requested : "p1";
+      if (todo.owner === "both") {
+        const slots = personSlotsFor(todo);
+        if (todo.completed) slots.p1 = true;
+        todo.completedBy = slots;
+        todo.completed = PERSON_SLOTS.every((slot) => slots[slot]);
+      } else {
+        /* 从「两人各一份」改成单人负责：沿用第一个人的状态，避免白丢一次勾选。 */
+        if (wasPair) todo.completed = Boolean(personSlotsFor(todo).p1);
+        delete todo.completedBy;
+      }
+      saveSharedChange("todos", todo).catch(console.error);
+      renderTodoList();
+      return;
+    }
+
+    if (!event.target.matches("input[type='checkbox']")) return;
+    const view = state.todoOwnerView || "all";
+    if (ownerFor(todo) === "both" && view !== "all") {
+      const slots = { ...personSlotsFor(todo), [view]: event.target.checked };
       todo.completedBy = slots;
       /* Keep the plain flag in sync so the stored record stays readable on its own. */
       todo.completed = PERSON_SLOTS.every((slot) => slots[slot]);
@@ -1490,6 +1791,151 @@ function setupPlaceMap() {
   });
 }
 
+/* ===== 每日天气：按需向 Open-Meteo 拉取最新预报 =====
+   选它是因为免费、无需 API key，且允许浏览器直接跨域调用，不需要后端代理。
+   中文地名无法直接检索，所以为 trip-data.json 出现过的地点各留一组坐标。 */
+const WEATHER_COORDS = Object.freeze({
+  "香港西九龙": [22.3049, 114.1687],
+  "香港机场": [22.3080, 113.9185],
+  "奥克兰": [-36.8485, 174.7633],
+  "基督城": [-43.5321, 172.6362],
+  "特卡波": [-44.0050, 170.4780],
+  "库克山": [-43.7340, 170.0960],
+  "普卡基湖": [-44.1900, 170.1300],
+  "瓦纳卡": [-44.7000, 169.1500],
+  "皇后镇": [-45.0312, 168.6626],
+  "格林诺奇": [-44.8500, 168.3833],
+  "但尼丁": [-45.8788, 170.5028],
+  "奥马鲁": [-45.0966, 170.9710]
+});
+
+/* WMO 天气代码 → 中文描述与图标（Open-Meteo 用 WMO code 表示天气现象）。 */
+const WMO_WEATHER = Object.freeze({
+  0: ["晴", "☀️"], 1: ["大致晴朗", "🌤️"], 2: ["局部多云", "⛅"], 3: ["多云", "☁️"],
+  45: ["有雾", "🌫️"], 48: ["雾凇", "🌫️"],
+  51: ["轻微毛毛雨", "🌦️"], 53: ["毛毛雨", "🌦️"], 55: ["较强毛毛雨", "🌧️"],
+  56: ["冻毛毛雨", "🌧️"], 57: ["强冻毛毛雨", "🌧️"],
+  61: ["小雨", "🌦️"], 63: ["中雨", "🌧️"], 65: ["大雨", "🌧️"],
+  66: ["冻雨", "🌧️"], 67: ["强冻雨", "🌧️"],
+  71: ["小雪", "🌨️"], 73: ["中雪", "🌨️"], 75: ["大雪", "❄️"], 77: ["雪粒", "🌨️"],
+  80: ["阵雨", "🌦️"], 81: ["中等阵雨", "🌧️"], 82: ["强阵雨", "⛈️"],
+  85: ["阵雪", "🌨️"], 86: ["强阵雪", "❄️"],
+  95: ["雷雨", "⛈️"], 96: ["雷雨伴冰雹", "⛈️"], 99: ["强雷雨伴冰雹", "⛈️"]
+});
+
+const WEATHER_CACHE_KEY = "travel-plan:weather-cache:v1";
+/* 预报本身会过期，缓存只用于避免「刚更新完一刷新就退回原始值」，3 小时足够。 */
+const WEATHER_CACHE_MAX_AGE = 3 * 60 * 60 * 1000;
+
+const weatherCoordinates = (name) => WEATHER_COORDS[String(name || "").trim()] || null;
+const describeWeatherCode = (code) => WMO_WEATHER[Number(code)] || ["—", "🌡️"];
+
+function setWeatherNote(text, isError = false) {
+  const note = $("#weather-note");
+  if (!note) return;
+  note.textContent = text || "";
+  note.classList.toggle("is-error", Boolean(isError));
+}
+
+function formatWeatherTime(timestamp) {
+  return new Date(timestamp).toLocaleString("zh-CN", { hour12: false, month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function restoreWeatherCache() {
+  try {
+    const raw = localStorage.getItem(WEATHER_CACHE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed?.weather) || Date.now() - Number(parsed.at || 0) > WEATHER_CACHE_MAX_AGE) return;
+    state.data.weather = parsed.weather;
+    state.weatherUpdatedAt = Number(parsed.at) || Date.now();
+  } catch { /* 缓存损坏就当没有，回落原始预报 */ }
+}
+
+function saveWeatherCache() {
+  try { localStorage.setItem(WEATHER_CACHE_KEY, JSON.stringify({ at: Date.now(), weather: state.data.weather })); }
+  catch { /* 隐私模式写不了，忽略 */ }
+}
+
+async function requestWeather(lat, lon, startDate, endDate) {
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", lat);
+  url.searchParams.set("longitude", lon);
+  url.searchParams.set("daily", "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code");
+  url.searchParams.set("timezone", "auto");
+  url.searchParams.set("start_date", startDate);
+  url.searchParams.set("end_date", endDate);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`天气服务返回 ${response.status}`);
+  const payload = await response.json();
+  const daily = payload?.daily;
+  if (!daily?.time?.length) throw new Error("天气服务未返回数据（行程日期可能已超出预报范围）");
+  const byDate = new Map();
+  daily.time.forEach((date, index) => {
+    byDate.set(date, {
+      high: daily.temperature_2m_max?.[index],
+      low: daily.temperature_2m_min?.[index],
+      precip: daily.precipitation_probability_max?.[index],
+      code: daily.weather_code?.[index]
+    });
+  });
+  return byDate;
+}
+
+async function refreshWeather() {
+  const button = $("#weather-refresh");
+  if (button) { button.disabled = true; button.textContent = "更新中…"; }
+  setWeatherNote("正在获取最新预报…");
+  try {
+    const authored = state.authoredWeather?.length ? state.authoredWeather : (state.data.weather || []);
+    /* 先按地点归并需要查询的日期范围：同一个地点只发一次请求，而不是每格发一次。 */
+    const spans = new Map();
+    for (const day of authored) {
+      for (const location of day.locations || []) {
+        const name = String(location.location || "").trim();
+        if (!weatherCoordinates(name)) continue;
+        const span = spans.get(name) || { start: day.date, end: day.date };
+        if (day.date < span.start) span.start = day.date;
+        if (day.date > span.end) span.end = day.date;
+        spans.set(name, span);
+      }
+    }
+    if (!spans.size) throw new Error("没有匹配到可查询的地点坐标");
+
+    const results = new Map();
+    await Promise.all([...spans].map(async ([name, span]) => {
+      const [lat, lon] = weatherCoordinates(name);
+      results.set(name, await requestWeather(lat, lon, span.start, span.end));
+    }));
+
+    state.data.weather = authored.map((day) => ({
+      ...day,
+      locations: (day.locations || []).map((location) => {
+        const found = results.get(String(location.location || "").trim())?.get(day.date);
+        if (!found) return location;
+        const [condition, icon] = describeWeatherCode(found.code);
+        return {
+          ...location,
+          condition,
+          icon,
+          tempHigh: Number.isFinite(found.high) ? Math.round(found.high) : location.tempHigh,
+          tempLow: Number.isFinite(found.low) ? Math.round(found.low) : location.tempLow,
+          precip: Number.isFinite(found.precip) ? Math.round(found.precip) : location.precip
+        };
+      })
+    }));
+    state.weatherUpdatedAt = Date.now();
+    saveWeatherCache();
+    renderWeather();
+    setWeatherNote(`已更新 · ${formatWeatherTime(state.weatherUpdatedAt)}`);
+  } catch (error) {
+    console.error("天气更新失败", error);
+    setWeatherNote(`更新失败：${error.message || error}`, true);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = "更新天气"; }
+  }
+}
+
 function renderWeather() {
   const weather = state.data.weather || [];
   if (!weather.length) {
@@ -1497,6 +1943,10 @@ function renderWeather() {
     if (section) section.hidden = true;
     return;
   }
+  /* 用 onclick 赋值而非 addEventListener：更新完成后会再次调用 renderWeather。 */
+  const refreshButton = $("#weather-refresh");
+  if (refreshButton) refreshButton.onclick = () => refreshWeather();
+  setWeatherNote(state.weatherUpdatedAt ? `已更新 · ${formatWeatherTime(state.weatherUpdatedAt)}` : "");
   $("#weather-range").textContent = `${formatCompactDate(weather[0].date)} — ${formatCompactDate(weather[weather.length - 1].date)}`;
   $("#weather-grid").innerHTML = weather.map((day) => `
     <div class="weather-day">
@@ -1544,6 +1994,8 @@ async function init() {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     state.data = await response.json();
     state.config = normalizeTripConfig(state.data.config);
+    /* 留一份原始预报做基线：天气更新只改 state.data.weather，反复更新不会逐次叠加。 */
+    state.authoredWeather = state.data.weather || [];
     window.TRAVEL_PLAN_CONFIG = state.config;
     window.TRAVEL_PLAN_DATA = state.data;
     document.dispatchEvent(new CustomEvent("travel-data-ready", { detail: state.data }));
@@ -1564,10 +2016,12 @@ async function init() {
         console.error(`${state.config.persistence.mode === "d1" ? "Shared" : "Local"} runtime data could not be loaded`, error);
         state.todos = [];
         state.itinerary = [];
+        state.flights = [];
         state.purchasedTickets = new Set();
       }
     }
     if (moduleEnabled("itinerary")) renderTimeline();
+    restoreWeatherCache();
     if (state.data.weather?.length) renderWeather();
     if (moduleEnabled("driving")) renderRental();
     if (moduleEnabled("todo")) renderTravelPrep();
