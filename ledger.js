@@ -919,6 +919,14 @@
           </div>
         </section>
         ${renderBillForm()}
+      </section>`;
+  }
+
+  /* 账单明细：从「记账」页签里拆出来，成为与记账 / 账单结算 / 消费明细同级的小模块
+     （需求 4）。列表内容、排序、合计与编辑删除规则全部沿用原实现。 */
+  function renderBillsPage() {
+    return `
+      <section class="ledger-tab-panel" data-ledger-panel="bills" role="tabpanel" aria-labelledby="ledger-bills-tab" ${activeTab === "bills" ? "" : "hidden"}>
         ${renderBillList()}
       </section>`;
   }
@@ -1471,11 +1479,13 @@
         </header>
         <nav class="ledger-tabs" role="tablist" aria-label="记账页面">
           <button id="ledger-entry-tab" class="ledger-tab ${activeTab === "entry" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "entry"}" data-ledger-action="set-tab" data-ledger-tab="entry">记账</button>
+          <button id="ledger-bills-tab" class="ledger-tab ${activeTab === "bills" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "bills"}" data-ledger-action="set-tab" data-ledger-tab="bills">账单明细</button>
           <button id="ledger-stats-tab" class="ledger-tab ${activeTab === "stats" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "stats"}" data-ledger-action="set-tab" data-ledger-tab="stats">账单结算</button>
           <button id="ledger-detail-tab" class="ledger-tab ${activeTab === "detail" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "detail"}" data-ledger-action="set-tab" data-ledger-tab="detail">消费明细</button>
         </nav>
         <div class="ledger-live" role="status" aria-live="polite">${escapeHtml(notice)}</div>
         ${renderEntryPage()}
+        ${renderBillsPage()}
         ${renderStatsPage()}
         ${renderDetailPage()}
         ${renderMembersDialog()}
@@ -2133,7 +2143,7 @@
     requestAnimationFrame(() => ledgerRoot.querySelector(`[data-ledger-tab="${nextTab}"]`)?.focus());
   }
 
-  const LEDGER_TABS = Object.freeze(["entry", "stats", "detail"]);
+  const LEDGER_TABS = Object.freeze(["entry", "bills", "stats", "detail"]);
 
   function tabForHash(hash) {
     const match = String(hash || "").match(/^#ledger-([a-z]+)$/);

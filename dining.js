@@ -35,6 +35,7 @@
   let cityFilter = "all";
   let notice = "";
   let editingRecordId = "";
+  let editingRestaurantId = "";
   let draft = emptyDraft();
   let memorySnapshot = null;
   let adapter = null;
@@ -108,11 +109,39 @@
       city: String(raw?.city || "").trim().slice(0, 30),
       name,
       cuisine: CUISINE_TYPES.includes(raw?.cuisine) ? raw.cuisine : String(raw?.cuisine || "").trim().slice(0, 20),
+      /* 消费类型：早期导入的 53 家把「消费类型」写在了 note 里（餐厅当时没有这个字段），
+         restaurantSpendType() 会在 spendType 为空时回退读 note，保证老数据照常显示。 */
+      spendType: String(raw?.spendType || "").trim().slice(0, MAX_SPEND_TYPE_LENGTH),
       priceLevel: String(raw?.priceLevel ?? raw?.price ?? "").trim().slice(0, 20),
       note: String(raw?.note || "").trim().slice(0, 160),
       source: String(raw?.source || "").trim().slice(0, 20),
+      starred: Boolean(raw?.starred),
+      checkedIn: Boolean(raw?.checkedIn),
       createdAt: typeof raw?.createdAt === "string" ? raw.createdAt : new Date().toISOString()
     };
+  }
+
+  /* 消费类型：新字段优先，老数据回退到 note。 */
+  function restaurantSpendType(restaurant) {
+    return String(restaurant?.spendType || restaurant?.note || "").trim();
+  }
+
+  /* 餐厅的去重键：城市 + 店名（大小写/空格无关）。 */
+  function restaurantKey(restaurant) {
+    return `${String(restaurant?.city || "").trim()}|${String(restaurant?.name || "").trim().toLowerCase()}`;
+  }
+
+  function findRestaurant({ city = "", name = "" } = {}) {
+    const wantedName = String(name || "").trim().toLowerCase();
+    if (!wantedName) return null;
+    const wantedCity = String(city || "").trim();
+    const named = data.restaurants.filter((restaurant) => String(restaurant.name || "").trim().toLowerCase() === wantedName);
+    if (!named.length) return null;
+    if (wantedCity) {
+      const exact = named.find((restaurant) => String(restaurant.city || "").trim() === wantedCity);
+      if (exact) return exact;
+    }
+    return named[0];
   }
 
   function normalizeRecord(raw) {
@@ -255,6 +284,24 @@
     return [...found];
   }
 
+  /* 餐饮类型候选：内置类型 + 餐厅明细 / 记录里出现过的值（需求 3②a 下拉来源）。 */
+  function cuisineOptions() {
+    const found = new Set(CUISINE_TYPES);
+    data.restaurants.forEach((restaurant) => restaurant.cuisine && found.add(restaurant.cuisine));
+    data.records.forEach((record) => record.cuisine && found.add(record.cuisine));
+    return [...found];
+  }
+
+  /* 消费类型候选：内置 + 自填 + 餐厅明细里的消费类型。 */
+  function spendTypeOptions() {
+    const found = new Set(spendTypeSuggestions());
+    data.restaurants.forEach((restaurant) => {
+      const type = restaurantSpendType(restaurant);
+      if (type) found.add(type);
+    });
+    return [...found];
+  }
+
   function filteredRecords() {
     return cityFilter === "all" ? data.records : data.records.filter((record) => record.city === cityFilter);
   }
@@ -285,25 +332,75 @@
     return `<nav class="dining-city-nav" aria-label="按城市筛选">${buttons.join("")}</nav>`;
   }
 
+  /* 星标（五角星）/ 打卡（月牙）图标。内联 SVG：emoji 在不同系统上字重和颜色不可控。 */
+  const STAR_PATH = "M12 2.6l2.92 5.92 6.53.95-4.73 4.61 1.12 6.5L12 17.5l-5.84 3.08 1.12-6.5-4.73-4.61 6.53-.95z";
+  const MOON_PATH = "M20.9 13.35A8.9 8.9 0 1 1 10.65 3.1a7.1 7.1 0 0 0 10.25 10.25z";
+
+  function diningFlagButton(restaurant, kind) {
+    const on = kind === "star" ? restaurant.starred : restaurant.checkedIn;
+    const label = kind === "star" ? "星标" : "打卡";
+    const action = kind === "star" ? "toggle-star" : "toggle-checkin";
+    return `
+      <button type="button" class="dining-flag dining-flag--${kind}${on ? " is-on" : ""}" data-dining-action="${action}" data-dining-id="${escapeAttribute(restaurant.id)}" aria-pressed="${on ? "true" : "false"}" aria-label="${on ? `取消${label}` : `标记${label}`}：${escapeAttribute(restaurant.name)}" title="${label}">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${kind === "star" ? STAR_PATH : MOON_PATH}"></path></svg>
+      </button>`;
+  }
+
+  /* 行内编辑餐厅明细（需求 3①e）。
+     老数据把「消费类型」存在 note 里：这种行进入编辑时，消费类型预填 note 值、
+     备注留空，保存后 note 迁移到 spendType，不再重复显示。 */
+  function renderRestaurantEditor(restaurant) {
+    const legacy = !String(restaurant.spendType || "").trim();
+    return `
+      <form class="dining-restaurant-editor" data-dining-form="restaurant-edit" data-dining-id="${escapeAttribute(restaurant.id)}">
+        <div class="dining-grid-2">
+          <label class="ledger-field"><span class="ledger-field-label">城市</span><input class="ledger-input" name="city" list="dining-city-list" maxlength="30" value="${escapeAttribute(restaurant.city || "")}"></label>
+          <label class="ledger-field"><span class="ledger-field-label">店名</span><input class="ledger-input" name="name" maxlength="60" value="${escapeAttribute(restaurant.name)}" required></label>
+          <label class="ledger-field"><span class="ledger-field-label">餐饮类型</span><input class="ledger-input" name="cuisine" list="dining-cuisine-list" maxlength="20" value="${escapeAttribute(restaurant.cuisine || "")}"></label>
+          <label class="ledger-field"><span class="ledger-field-label">消费类型</span><input class="ledger-input" name="spendType" list="dining-spend-type-list" maxlength="${MAX_SPEND_TYPE_LENGTH}" value="${escapeAttribute(restaurantSpendType(restaurant))}"></label>
+          <label class="ledger-field"><span class="ledger-field-label">人均 <small>选填</small></span><input class="ledger-input" name="priceLevel" maxlength="20" value="${escapeAttribute(restaurant.priceLevel || "")}"></label>
+          <label class="ledger-field"><span class="ledger-field-label">备注 <small>选填</small></span><input class="ledger-input" name="note" maxlength="160" value="${escapeAttribute(legacy ? "" : restaurant.note || "")}"></label>
+        </div>
+        <p class="ledger-form-error" data-dining-form-error role="alert"></p>
+        <div class="dining-restaurant-editor__actions">
+          <button class="ledger-primary-button" type="submit">保存修改</button>
+          <button class="ledger-text-button" type="button" data-dining-action="cancel-restaurant-edit">取消</button>
+        </div>
+      </form>`;
+  }
+
+  /* 餐厅明细一行：行首两列（星标 / 打卡），中间三行（城市 / 店名 / 消费类型·餐饮类型）。
+     城市与店名同号，第三行小一号；不再显示来源（导入 / 手动 / 行程）标识。 */
   function renderRestaurantRow(restaurant) {
+    if (editingRestaurantId === restaurant.id) {
+      return `
+        <article class="ledger-bill-row dining-row dining-row--editing" data-dining-restaurant-id="${escapeAttribute(restaurant.id)}">
+          ${renderRestaurantEditor(restaurant)}
+        </article>`;
+    }
+    const tags = [restaurantSpendType(restaurant), restaurant.cuisine].filter(Boolean).join(" · ");
     return `
       <article class="ledger-bill-row dining-row" data-dining-restaurant-id="${escapeAttribute(restaurant.id)}">
-        <div class="ledger-bill-main">
-          <div class="ledger-bill-title-row">
-            <span class="dining-mark" data-dining-cuisine="${escapeAttribute(restaurant.cuisine || "其他")}" aria-hidden="true"></span>
-            <div>
-              <h3>${escapeHtml(restaurant.name)}</h3>
-              <p class="ledger-bill-date">${escapeHtml([restaurant.city, restaurant.cuisine].filter(Boolean).join(" · ") || "未填写城市")}</p>
-              ${restaurant.note ? `<p class="ledger-bill-date">${escapeHtml(restaurant.note)}</p>` : ""}
-            </div>
+        <div class="dining-row__body">
+          <div class="dining-row__flags">
+            ${diningFlagButton(restaurant, "star")}
+            ${diningFlagButton(restaurant, "moon")}
           </div>
-          <div class="ledger-bill-amount">
-            ${restaurant.priceLevel ? `<strong>${escapeHtml(restaurant.priceLevel)}</strong>` : ""}
-            ${restaurant.source ? `<span>${escapeHtml(restaurant.source)}</span>` : ""}
+          <div class="ledger-bill-main">
+            <div class="ledger-bill-title-row">
+              <span class="dining-mark" data-dining-cuisine="${escapeAttribute(restaurant.cuisine || "其他")}" aria-hidden="true"></span>
+              <div>
+                <p class="dining-row__city">${escapeHtml(restaurant.city || "未填写城市")}</p>
+                <h3 class="dining-row__name">${escapeHtml(restaurant.name)}</h3>
+                ${tags ? `<p class="dining-row__tags">${escapeHtml(tags)}</p>` : ""}
+              </div>
+            </div>
+            ${restaurant.priceLevel ? `<div class="ledger-bill-amount"><strong>${escapeHtml(restaurant.priceLevel)}</strong></div>` : ""}
           </div>
         </div>
         <div class="ledger-row-actions">
           <button class="ledger-text-button" type="button" data-dining-action="use-restaurant" data-dining-id="${escapeAttribute(restaurant.id)}">用它记一笔</button>
+          <button class="ledger-text-button" type="button" data-dining-action="edit-restaurant" data-dining-id="${escapeAttribute(restaurant.id)}">编辑</button>
           <button class="ledger-text-button ledger-danger-button" type="button" data-dining-action="delete-restaurant" data-dining-id="${escapeAttribute(restaurant.id)}">删除</button>
         </div>
       </article>`;
@@ -314,25 +411,6 @@
       (first.city || "").localeCompare(second.city || "", "zh-CN") || first.name.localeCompare(second.name, "zh-CN"));
     return `
       <section class="ledger-tab-panel" data-dining-panel="restaurants" role="tabpanel" aria-labelledby="dining-restaurants-tab" ${activeTab === "restaurants" ? "" : "hidden"}>
-        <section class="ledger-entry-card" aria-labelledby="dining-import-title">
-          <div class="ledger-section-heading">
-            <div>
-              <p class="ledger-section-kicker">预备清单</p>
-              <h2 id="dining-import-title">导入餐厅清单</h2>
-            </div>
-            <button class="ledger-text-button" type="button" data-dining-action="import-from-trip">从行程导入用餐点</button>
-          </div>
-          <form class="ledger-bill-form" data-dining-form="import" novalidate>
-            <label class="ledger-field">
-              <span class="ledger-field-label">每行一条 <small>城市, 店名, 餐饮类型, 人均, 备注</small></span>
-              <textarea class="ledger-input dining-textarea" name="bulk" rows="4" placeholder="皇后镇, Fergburger, 快餐, NZ$18, 网红汉堡&#10;奥克兰, Depot, 新西兰本地, NZ$40"></textarea>
-            </label>
-            <p class="ledger-form-error" data-dining-form-error role="alert"></p>
-            <button class="ledger-primary-button" type="submit">导入清单</button>
-          </form>
-          <p class="dining-hint">也支持粘贴 JSON 数组，例如 <code>[{"city":"皇后镇","name":"Fergburger","cuisine":"快餐"}]</code>。</p>
-        </section>
-
         <section class="ledger-list-section" aria-labelledby="dining-restaurant-list-title">
           <div class="ledger-section-heading ledger-list-heading">
             <div>
@@ -367,17 +445,40 @@
                 <input class="ledger-input" name="cuisine" list="dining-cuisine-list" maxlength="20" placeholder="快餐">
               </label>
               <label class="ledger-field">
+                <span class="ledger-field-label">消费类型</span>
+                <input class="ledger-input" name="spendType" list="dining-spend-type-list" maxlength="${MAX_SPEND_TYPE_LENGTH}" placeholder="正餐">
+              </label>
+              <label class="ledger-field">
                 <span class="ledger-field-label">人均 <small>选填</small></span>
                 <input class="ledger-input" name="priceLevel" maxlength="20" placeholder="NZ$18">
               </label>
+              <label class="ledger-field">
+                <span class="ledger-field-label">备注 <small>选填</small></span>
+                <input class="ledger-input" name="note" maxlength="160" placeholder="必点 / 位置 / 营业时间">
+              </label>
             </div>
-            <label class="ledger-field dining-field-block">
-              <span class="ledger-field-label">备注 <small>选填</small></span>
-              <input class="ledger-input" name="note" maxlength="160" placeholder="必点 / 位置 / 营业时间">
-            </label>
             <p class="ledger-form-error" data-dining-form-error role="alert"></p>
             <button class="ledger-primary-button" type="submit">添加餐厅</button>
           </form>
+        </section>
+
+        <section class="ledger-entry-card" aria-labelledby="dining-import-title">
+          <div class="ledger-section-heading">
+            <div>
+              <p class="ledger-section-kicker">预备清单</p>
+              <h2 id="dining-import-title">导入餐厅清单</h2>
+            </div>
+            <button class="ledger-text-button" type="button" data-dining-action="import-from-trip">从行程导入用餐点</button>
+          </div>
+          <form class="ledger-bill-form" data-dining-form="import" novalidate>
+            <label class="ledger-field">
+              <span class="ledger-field-label">每行一条 <small>城市, 店名, 餐饮类型, 人均, 备注</small></span>
+              <textarea class="ledger-input dining-textarea" name="bulk" rows="4" placeholder="皇后镇, Fergburger, 快餐, NZ$18, 网红汉堡&#10;奥克兰, Depot, 新西兰本地, NZ$40"></textarea>
+            </label>
+            <p class="ledger-form-error" data-dining-form-error role="alert"></p>
+            <button class="ledger-primary-button" type="submit">导入清单</button>
+          </form>
+          <p class="dining-hint">也支持粘贴 JSON 数组，例如 <code>[{"city":"皇后镇","name":"Fergburger","cuisine":"快餐"}]</code>。</p>
         </section>
       </section>`;
   }
@@ -497,26 +598,32 @@
   }
 
   function renderRecordPanel() {
-    const records = [...filteredRecords()].sort((first, second) =>
-      String(second.occurredAt || second.createdAt).localeCompare(String(first.occurredAt || first.createdAt)));
     return `
       <section class="ledger-tab-panel" data-dining-panel="record" role="tabpanel" aria-labelledby="dining-record-tab" ${activeTab === "record" ? "" : "hidden"}>
         ${renderRecordForm()}
-        <section class="ledger-list-section" aria-labelledby="dining-record-list-title">
-          <div class="ledger-section-heading ledger-list-heading">
-            <div>
-              <p class="ledger-section-kicker">已提交记录</p>
-              <h2 id="dining-record-list-title">${records.length ? `${records.length} 条记录` : "还没有记录"}</h2>
-            </div>
-            <div class="ledger-list-total">
-              <span>${cityFilter === "all" ? "合计" : escapeHtml(cityFilter)}</span>
-              <strong>${escapeHtml(totalsByCurrency(records).map(([code, sum]) => formatMoney(sum, code)).join(" · ") || formatMoney(0, "CNY"))}</strong>
-            </div>
+      </section>`;
+  }
+
+  /* 已提交记录：原属「饮食记录」页签，现移到「饮食明细」页签下方（需求 3②c），
+     条数 / 合计 / 编辑 / 删除等规则保持不变。 */
+  function renderSubmittedRecords() {
+    const records = [...filteredRecords()].sort((first, second) =>
+      String(second.occurredAt || second.createdAt).localeCompare(String(first.occurredAt || first.createdAt)));
+    return `
+      <section class="ledger-list-section" aria-labelledby="dining-record-list-title">
+        <div class="ledger-section-heading ledger-list-heading">
+          <div>
+            <p class="ledger-section-kicker">已提交记录</p>
+            <h2 id="dining-record-list-title">${records.length ? `${records.length} 条记录` : "还没有记录"}</h2>
           </div>
-          ${records.length
-            ? `<div class="ledger-bill-list">${records.map(renderRecordRow).join("")}</div>`
-            : `<div class="ledger-empty-state"><p>记下第一笔用餐后，记录会显示在这里。</p></div>`}
-        </section>
+          <div class="ledger-list-total">
+            <span>${cityFilter === "all" ? "合计" : escapeHtml(cityFilter)}</span>
+            <strong>${escapeHtml(totalsByCurrency(records).map(([code, sum]) => formatMoney(sum, code)).join(" · ") || formatMoney(0, "CNY"))}</strong>
+          </div>
+        </div>
+        ${records.length
+          ? `<div class="ledger-bill-list">${records.map(renderRecordRow).join("")}</div>`
+          : `<div class="ledger-empty-state"><p>记下第一笔用餐后，记录会显示在这里。</p></div>`}
       </section>`;
   }
 
@@ -569,6 +676,8 @@
               </div>
             </section>`;
         }).join("") : `<div class="ledger-empty-state"><p>${cityFilter === "all" ? "添加饮食记录后，这里会按消费类型汇总。" : `${escapeHtml(cityFilter)} 还没有饮食记录。`}</p></div>`}
+
+        ${renderSubmittedRecords()}
       </section>`;
   }
 
@@ -590,8 +699,8 @@
         ${renderCityNav()}
         <div class="ledger-live" role="status" aria-live="polite">${escapeHtml(notice)}</div>
         <datalist id="dining-city-list">${cityOptions().map((city) => `<option value="${escapeAttribute(city)}"></option>`).join("")}</datalist>
-        <datalist id="dining-cuisine-list">${CUISINE_TYPES.map((cuisine) => `<option value="${escapeAttribute(cuisine)}"></option>`).join("")}</datalist>
-        <datalist id="dining-spend-type-list">${spendTypeSuggestions().map((type) => `<option value="${escapeAttribute(type)}"></option>`).join("")}</datalist>
+        <datalist id="dining-cuisine-list">${cuisineOptions().map((cuisine) => `<option value="${escapeAttribute(cuisine)}"></option>`).join("")}</datalist>
+        <datalist id="dining-spend-type-list">${spendTypeOptions().map((type) => `<option value="${escapeAttribute(type)}"></option>`).join("")}</datalist>
         <datalist id="dining-restaurant-list">${data.restaurants.map((restaurant) => `<option value="${escapeAttribute(restaurant.name)}"></option>`).join("")}</datalist>
         ${renderRestaurantsPanel()}
         ${renderRecordPanel()}
@@ -711,19 +820,48 @@
       images,
       createdAt: editingRecordId ? data.records.find((item) => item.id === editingRecordId)?.createdAt : new Date().toISOString()
     });
-    if (editingRecordId) {
+    const wasEditing = Boolean(editingRecordId);
+    if (wasEditing) {
       const index = data.records.findIndex((item) => item.id === editingRecordId);
       data.records[index] = record;
       editingRecordId = "";
-      setNotice("已保存修改。");
     } else {
       data.records.push(record);
-      setNotice("已记录一笔用餐。");
     }
+    const linked = linkRecordToRestaurant(record);
+    setNotice(wasEditing
+      ? "已保存修改。"
+      : linked ? `已记录一笔用餐，并勾选「${linked}」的打卡。` : "已记录一笔用餐。");
     draft = emptyDraft();
     draft.city = record.city;
     persist();
     renderApp();
+  }
+
+  /* 需求 3②b：提交用餐记录时同步餐厅明细 ——
+     已有这家店就勾上打卡；没有就按记录里的城市 / 消费类型 / 餐饮类型 / 店名新增一家并勾上打卡。
+     返回匹配到的店名（用于提示文案），没匹配上返回空串。 */
+  function linkRecordToRestaurant(record) {
+    if (!record?.name) return "";
+    const existing = findRestaurant({ city: record.city, name: record.name });
+    if (existing) {
+      const index = data.restaurants.findIndex((item) => item.id === existing.id);
+      if (index < 0) return existing.name;
+      const patch = { ...existing, checkedIn: true };
+      /* 只在餐厅侧缺字段时补齐，不覆盖用户已经填好的内容。 */
+      if (!patch.city && record.city) patch.city = record.city;
+      if (!patch.cuisine && record.cuisine) patch.cuisine = record.cuisine;
+      if (!patch.spendType && !patch.note && record.spendType) patch.spendType = record.spendType;
+      data.restaurants[index] = normalizeRestaurant(patch);
+      return existing.name;
+    }
+    const created = normalizeRestaurant({
+      city: record.city, name: record.name, cuisine: record.cuisine,
+      spendType: record.spendType, checkedIn: true, source: "记录"
+    });
+    if (!created) return "";
+    data.restaurants.push(created);
+    return created.name;
   }
 
   function parseRestaurantImport(text) {
@@ -806,7 +944,29 @@
     if (action === "set-tab") {
       const next = ["restaurants", "record", "breakdown"].includes(actionButton.dataset.diningTab) ? actionButton.dataset.diningTab : "restaurants";
       if (next !== "record") editingRecordId = "";
+      if (next !== "restaurants") editingRestaurantId = "";
       activeTab = next;
+      renderApp();
+      return;
+    }
+    /* 星标 / 打卡：点击即切换并写回共享层（需求 3①d）。 */
+    if (action === "toggle-star" || action === "toggle-checkin") {
+      const index = data.restaurants.findIndex((item) => item.id === id);
+      if (index < 0) return;
+      const field = action === "toggle-star" ? "starred" : "checkedIn";
+      const restaurant = data.restaurants[index];
+      data.restaurants[index] = normalizeRestaurant({ ...restaurant, [field]: !restaurant[field] });
+      persist();
+      renderApp();
+      return;
+    }
+    if (action === "edit-restaurant") {
+      editingRestaurantId = editingRestaurantId === id ? "" : id;
+      renderApp();
+      return;
+    }
+    if (action === "cancel-restaurant-edit") {
+      editingRestaurantId = "";
       renderApp();
       return;
     }
@@ -814,7 +974,7 @@
       const restaurant = data.restaurants.find((item) => item.id === id);
       if (!restaurant) return;
       editingRecordId = "";
-      draft = { ...emptyDraft(), city: restaurant.city, name: restaurant.name, cuisine: restaurant.cuisine, spendType: "正餐" };
+      draft = { ...emptyDraft(), city: restaurant.city, name: restaurant.name, cuisine: restaurant.cuisine, spendType: restaurantSpendType(restaurant) || "正餐" };
       activeTab = "record";
       setNotice(`已带上「${restaurant.name}」，补充花费后保存。`);
       renderApp();
@@ -902,7 +1062,7 @@
       const read = (name) => form.querySelector(`[name="${name}"]`)?.value || "";
       const restaurant = normalizeRestaurant({
         city: read("city"), name: read("name"), cuisine: read("cuisine"),
-        priceLevel: read("priceLevel"), note: read("note"), source: "手动"
+        spendType: read("spendType"), priceLevel: read("priceLevel"), note: read("note"), source: "手动"
       });
       if (!restaurant) {
         if (errorNode) errorNode.textContent = "请填写店名。";
@@ -911,6 +1071,28 @@
       data.restaurants.push(restaurant);
       persist();
       setNotice("已添加餐厅。");
+      renderApp();
+      return;
+    }
+
+    /* 行内编辑餐厅明细：保留 id / 星标 / 打卡等未在表单里的字段。 */
+    if (kind === "restaurant-edit") {
+      const index = data.restaurants.findIndex((item) => item.id === (form.dataset.diningId || ""));
+      if (index < 0) return;
+      const read = (name) => form.querySelector(`[name="${name}"]`)?.value || "";
+      const updated = normalizeRestaurant({
+        ...data.restaurants[index],
+        city: read("city"), name: read("name"), cuisine: read("cuisine"),
+        spendType: read("spendType"), priceLevel: read("priceLevel"), note: read("note")
+      });
+      if (!updated) {
+        if (errorNode) errorNode.textContent = "请填写店名。";
+        return;
+      }
+      data.restaurants[index] = updated;
+      editingRestaurantId = "";
+      persist();
+      setNotice("已保存餐厅修改。");
       renderApp();
       return;
     }
@@ -926,12 +1108,37 @@
       return;
     }
     const form = event.target.closest('[data-dining-form="record"]');
-    if (form) captureDraft(form);
+    if (form) {
+      if (event.target.closest('[name="name"]')) autofillFromRestaurantName(form);
+      captureDraft(form);
+    }
   }
 
   function handleInput(event) {
     const form = event.target.closest('[data-dining-form="record"]');
-    if (form) captureDraft(form);
+    if (!form) return;
+    /* 只在改「店名」时联动，避免用户手改城市 / 消费类型时被反复覆盖回原值。 */
+    if (event.target.closest('[name="name"]')) autofillFromRestaurantName(form);
+    captureDraft(form);
+  }
+
+  /* 需求 3②a：店名与餐厅明细里的某家店一致时，自动带出城市 / 消费类型 / 餐饮类型。
+     三个字段仍是普通可编辑输入框，不是强制关联。 */
+  function autofillFromRestaurantName(form) {
+    const nameField = form.querySelector('[name="name"]');
+    if (!nameField) return;
+    const restaurant = findRestaurant({
+      name: nameField.value,
+      city: form.querySelector('[name="city"]')?.value || ""
+    });
+    if (!restaurant) return;
+    const apply = (fieldName, value) => {
+      const field = form.querySelector(`[name="${fieldName}"]`);
+      if (field && value && field.value !== value) field.value = value;
+    };
+    apply("city", restaurant.city);
+    apply("spendType", restaurantSpendType(restaurant));
+    apply("cuisine", restaurant.cuisine);
   }
 
   /* ---------- init ---------- */
@@ -966,6 +1173,7 @@
     setActiveTab(tab) {
       const next = ["restaurants", "record", "breakdown"].includes(tab) ? tab : "restaurants";
       if (next !== "record") editingRecordId = "";
+      if (next !== "restaurants") editingRestaurantId = "";
       activeTab = next;
       if (data) renderApp();
     },

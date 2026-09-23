@@ -83,7 +83,7 @@ function applyModuleConfig() {
   const hashModules = {
     "#flights": "flights", "#route": "overview", "#itinerary": "itinerary",
     "#drive": "driving", "#prep": "todo", "#ledger": "ledger",
-    "#ledger-stats": "ledger", "#ledger-detail": "ledger"
+    "#ledger-bills": "ledger", "#ledger-stats": "ledger", "#ledger-detail": "ledger"
   };
   const requestedModule = hashModules[location.hash];
   if (requestedModule && !moduleEnabled(requestedModule)) {
@@ -959,10 +959,8 @@ function scheduleItemMarkup(day, item) {
         ${scheduleTickets}
         ${mapLinks ? `<div class="schedule-map-links">${mapLinks}</div>` : ""}
         <div class="schedule-actions">
-          <label class="schedule-done">
-            <input type="checkbox" data-schedule-complete ${item.completed ? "checked" : ""} aria-label="${item.completed ? "取消完成" : "标记完成"}：${escapeHtml(item.text)}">
-            <span class="schedule-done__label">${item.completed ? "已完成" : "标记完成"}</span>
-          </label>
+          <button type="button" class="schedule-action schedule-state-btn" data-schedule-undo aria-label="标记为未完成：${escapeHtml(item.text)}" ${item.completed ? "" : "disabled"}>未完成</button>
+          <button type="button" class="schedule-action schedule-state-btn schedule-state-btn--done" data-schedule-done aria-label="标记为已完成：${escapeHtml(item.text)}" ${item.completed ? "disabled" : ""}>已完成</button>
           <button type="button" class="schedule-action" data-schedule-edit aria-label="编辑：${escapeHtml(item.text)}">编辑</button>
           <button type="button" class="schedule-action schedule-action--danger" data-schedule-remove aria-label="删除：${escapeHtml(item.text)}">删除</button>
         </div>
@@ -1136,6 +1134,30 @@ function renderTimeline() {
       openTicketDialog(ticketButton.dataset.ticketOpen, ticketButton);
       return;
     }
+    /* 「未完成 / 已完成」两个按钮，与行程提醒模块的语义一致：
+       点「已完成」把该条目的时间改成完成时刻（11:00 的午餐 10:50 完成 → 时间改 10:50），
+       点「未完成」只回退状态、不动时间。 */
+    const stateButton = event.target.closest("[data-schedule-done], [data-schedule-undo]");
+    if (stateButton) {
+      const host = stateButton.closest("[data-schedule-id]");
+      if (!host) return;
+      const day = Number(host.dataset.scheduleDay);
+      const itemId = host.dataset.scheduleItem;
+      const entry = findItineraryEntry(day, itemId);
+      if (!entry) return;
+      const completed = stateButton.hasAttribute("data-schedule-done");
+      const now = new Date();
+      const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      saveItineraryRecord(day, itemId, {
+        time: completed ? time : entry.time,
+        text: entry.text,
+        type: entry.type,
+        completed
+      });
+      renderTimeline();
+      renderFocus();
+      return;
+    }
     const editButton = event.target.closest("[data-schedule-edit]");
     if (editButton) {
       state.editingScheduleId = editButton.closest("[data-schedule-id]")?.dataset.scheduleId || null;
@@ -1167,24 +1189,6 @@ function renderTimeline() {
     renderTimeline();
   };
   $("#timeline").onchange = (event) => {
-    const completeBox = event.target.closest("[data-schedule-complete]");
-    if (completeBox) {
-      const host = completeBox.closest("[data-schedule-id]");
-      if (!host) return;
-      const day = Number(host.dataset.scheduleDay);
-      const itemId = host.dataset.scheduleItem;
-      const entry = findItineraryEntry(day, itemId);
-      if (!entry) return;
-      saveItineraryRecord(day, itemId, {
-        time: entry.time,
-        text: entry.text,
-        type: entry.type,
-        completed: completeBox.checked
-      });
-      renderTimeline();
-      renderFocus();
-      return;
-    }
     const checkbox = event.target.closest(".schedule-ticket input[type='checkbox']");
     if (!checkbox) return;
     if (checkbox.checked) state.purchasedTickets.add(checkbox.value);
@@ -2106,6 +2110,7 @@ function stayCard(accommodation, index, total) {
   return `
     <article class="flight-card stay-card" data-stay="${escapeHtml(accommodation.id)}">
       <div class="flight-card__top"><span>STAY ${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}</span></div>
+      ${accommodation.city ? `<div class="stay-card__city">${escapeHtml(accommodation.city)}</div>` : ""}
       <div class="stay-card__name">${escapeHtml(accommodation.name)}</div>
       <div class="stay-card__dates">
         <span>入住 ${escapeHtml(formatCompactDate(accommodation.checkIn))}</span>

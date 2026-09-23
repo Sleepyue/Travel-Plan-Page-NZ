@@ -213,7 +213,7 @@
       routeFromLocation({ forceScroll: false });
     });
     window.addEventListener("travel-ledger:navigate", (event) => {
-      const tab = event.detail?.tab === "stats" || event.detail?.tab === "detail" ? event.detail.tab : "entry";
+      const tab = ["bills", "stats", "detail"].includes(event.detail?.tab) ? event.detail.tab : "entry";
       const hash = tab === "entry" ? "#ledger" : `#ledger-${tab}`;
       if (location.hash !== hash) history.pushState({ view: "ledger" }, "", hash);
     });

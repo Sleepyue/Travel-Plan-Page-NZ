@@ -133,11 +133,12 @@ main { overflow-x: clip; }
 .flight-stop__code { display: block; color: #fff; font: 760 clamp(25px, 8vw, 36px)/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.05em; }
 .flight-stop__city { display: block; min-height: 30px; margin-top: 5px; color: #b8cccf; font-size: 11px; line-height: 1.25; }
 .flight-stop__dot { position: relative; z-index: 1; display: inline-block; width: 9px; height: 9px; margin: 8px 0 10px; border: 2px solid #8fc6d0; border-radius: 50%; background: var(--ink); }
-.flight-stop__timing { display: flex; flex-direction: column; gap: 3px; color: #9db7bc; font-size: 9px; line-height: 1.3; }
-.flight-stop__timing b { color: #eff8f8; font-size: 10px; font-weight: 720; }
-.flight-stop__timing em { color: #e0a983; font-style: normal; font-size: 9px; }
+/* 出发日期及时间 / 抵达时间、以及中段的航班号统一放大到 16px（原来只有 9–10px，手机上几乎看不清）。 */
+.flight-stop__timing { display: flex; flex-direction: column; gap: 3px; color: #b8cccf; font-size: 16px; line-height: 1.28; }
+.flight-stop__timing b { color: #eff8f8; font-size: 16px; font-weight: 720; }
+.flight-stop__timing em { color: #e0a983; font-style: normal; font-size: 15px; }
 .flight-segment { min-width: 0; padding-top: 53px; color: #91b9c0; text-align: center; }
-.flight-segment span { display: block; overflow: hidden; font: 700 9px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.flight-segment span { display: block; overflow: hidden; font: 700 16px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
 .flight-segment i { display: block; height: 1px; margin-top: 9px; background: rgba(143,198,208,.5); color: #8fc6d0; font-style: normal; font-size: 13px; line-height: 1px; text-align: right; }
 .flight-card__countdown-row { margin-top: auto; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.16); }
 .flight-countdown { text-align: left; }
@@ -208,12 +209,12 @@ main { overflow-x: clip; }
 .schedule-item.is-done::after { border-color: var(--forest); background: var(--forest); }
 .schedule-item.is-done .schedule-text { color: #87928f; text-decoration: line-through; }
 .schedule-actions { margin-top: 9px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.schedule-done { min-height: 34px; padding: 0 10px 0 4px; display: inline-flex; align-items: center; gap: 7px; border: 1px solid #cbd8d5; border-radius: 999px; background: rgba(255,255,255,.75); cursor: pointer; }
-.schedule-done input { position: absolute; opacity: 0; pointer-events: none; }
-.schedule-done .todo-check { width: 19px; height: 19px; flex: 0 0 19px; border-radius: 6px; }
-.schedule-done input:checked + .todo-check { border-color: var(--forest); color: white; background: var(--forest); }
-.schedule-done span.schedule-done__label { font-size: 11px; font-weight: 700; color: var(--muted); }
-.schedule-done input:checked ~ .schedule-done__label { color: #3f6347; }
+/* 「未完成 / 已完成」双按钮（2026-09-24 改版，语义对齐行程提醒模块）：
+   已完成 = 实心强调；当前状态对应的那颗按钮 disabled，另一颗可点。 */
+.schedule-state-btn { font-weight: 720; }
+.schedule-state-btn:disabled { opacity: .5; cursor: not-allowed; }
+.schedule-state-btn--done:not(:disabled) { border-color: var(--forest); color: #fff; background: var(--forest); }
+.schedule-state-btn--done:not(:disabled):hover { border-color: #3f6347; background: #3f6347; }
 .schedule-action { min-height: 34px; padding: 0 11px; border: 1px solid #cfdbd8; border-radius: 999px; background: rgba(255,255,255,.75); color: #3d5257; cursor: pointer; font-size: 11px; font-weight: 700; }
 .schedule-action:hover { border-color: var(--lake); color: var(--lake); }
 .schedule-action--danger { color: #9a7062; }
@@ -731,7 +732,10 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
   border-radius: var(--radius-lg);
 }
 .focus-carousel::-webkit-scrollbar { display: none; }
-.focus-slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; display: flex; }
+/* .focus-slide 与 .focus-card 是同一个 <article>：只靠 .focus-slide 的 display:flex
+   会把「行程 / 出行时间 / 倒计时」排成一行，窄屏下每列被压得竖着断字。
+   改成纵向主轴后，三个字段从上到下依次展示，文字正常横向流动。 */
+.focus-slide { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; display: flex; flex-direction: column; }
 .focus-slide .focus-card { flex: 1 1 auto; }
 .focus-card.is-done .focus-card__event { text-decoration: line-through; text-decoration-color: rgba(238,247,248,.6); }
 .focus-card.is-empty { background: rgba(27, 55, 65, .5); box-shadow: none; }
@@ -805,10 +809,14 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 .day-chevron { transition: transform .18s ease; }
 .day-chevron.is-expanded { transform: rotate(45deg); }
 
-/* ===== 住宿安排 / 门票预订（需求④⑤），容器复用 .flight-carousel ===== */
-.stay-card__name { margin: 10px 0 8px; font-size: clamp(18px, 5vw, 24px); font-weight: 780; line-height: 1.2; letter-spacing: -.02em; overflow-wrap: anywhere; }
-.stay-card__dates { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); font: 700 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
-.stay-card__dates b { margin-left: auto; padding: 3px 9px; border-radius: 999px; background: var(--lake-soft); color: var(--lake); font-size: 11px; }
+/* ===== 住宿安排 / 门票预订（需求④⑤），容器复用 .flight-carousel =====
+   城市 / 酒店名称 / 入住退房日期统一为同一字号（--stay-line-size），
+   晚数徽标保持小一号，避免抢主信息。 */
+.stay-card { --stay-line-size: clamp(17px, 4.6vw, 21px); }
+.stay-card__city { margin: 8px 0 2px; color: #9fd0d8; font-size: var(--stay-line-size); font-weight: 720; line-height: 1.2; letter-spacing: -.01em; overflow-wrap: anywhere; }
+.stay-card .stay-card__name { margin: 2px 0 8px; font-size: var(--stay-line-size); font-weight: 780; line-height: 1.25; letter-spacing: -.02em; overflow-wrap: anywhere; }
+.stay-card .stay-card__dates { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: #b8cccf; font-size: var(--stay-line-size); font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.stay-card__dates b { margin-left: auto; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.14); color: #d9edf0; font-size: 11px; }
 .stay-card__note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
 .ticketplan-card { display: flex; flex-direction: column; align-items: flex-start; }
 .ticketplan-card__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }

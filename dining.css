@@ -106,6 +106,41 @@ body[data-active-view="dining"] .topbar { background: rgba(250, 251, 249, .93); 
 .ledger-category-mark[data-dining-spend="食材"] { background: #5c8e62; }
 .ledger-category-mark[data-dining-spend="外卖"] { background: #4f72a2; }
 
+/* 餐厅明细行（需求 3①b/3①d）：行首两列（星标 / 打卡）+ 正文三行（城市 / 店名 / 消费类型·餐饮类型）。
+   城市与店名同号（14px），第三行小一号（12px）。 */
+.dining-row__body { display: flex; align-items: flex-start; gap: 8px; }
+.dining-row__flags { flex: 0 0 auto; display: flex; gap: 2px; margin-top: -2px; }
+.dining-flag {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  color: #aab8b6;
+  background: transparent;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease;
+}
+.dining-flag svg { width: 20px; height: 20px; }
+.dining-flag path { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; stroke-linecap: round; }
+.dining-flag:hover { color: #6f8481; background: #eef3f1; }
+.dining-flag--star.is-on { color: #d8a13a; }
+.dining-flag--star.is-on path { fill: currentColor; }
+.dining-flag--moon.is-on { color: #5b6fb0; }
+.dining-flag--moon.is-on path { fill: currentColor; }
+.dining-row .ledger-bill-main { flex: 1 1 auto; min-width: 0; }
+.dining-row .ledger-bill-title-row .dining-row__city { margin-top: 0; color: #7d8b8d; font-size: 14px; font-weight: 700; }
+.dining-row .ledger-bill-title-row h3.dining-row__name { font-size: 14px; font-weight: 760; overflow-wrap: anywhere; }
+.dining-row .ledger-bill-title-row .dining-row__tags { margin-top: 3px; color: #95a0a1; font-size: 12px; }
+
+/* 行内编辑餐厅明细。 */
+.dining-row--editing { background: #f8faf9; }
+.dining-restaurant-editor { display: grid; gap: 12px; }
+.dining-restaurant-editor__actions { display: flex; align-items: center; gap: 10px; }
+.dining-restaurant-editor__actions .ledger-primary-button { width: auto; min-height: 40px; margin-top: 0; padding: 0 20px; }
+
 /* Record rows. */
 .dining-row__meta { margin-top: 5px; color: #95a0a1; font-size: 10px; line-height: 1.5; }
 .dining-row__stars { color: #c58b32; letter-spacing: .5px; }
