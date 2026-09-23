@@ -1295,7 +1295,35 @@
   "ticketPlanning": {
     "statusStorage": "local",
     "statusStorageNote": "门票状态默认只保存在当前浏览器。",
-    "items": []
+    "items": [
+      {
+        "id": "ticket-heli-tasman",
+        "name": "塔斯曼库克山直升机体验",
+        "day": 4,
+        "requirement": "advance-required",
+        "purchaseStatus": "purchased",
+        "scheduleMatchTerms": ["Mount Cook"],
+        "guidance": [
+          "09-28 10:30 · 25 分钟直升机观光飞行，含雪地降落或高山降落（夏季）",
+          "预订人 XIAO*** · 1 成人",
+          "Klook 订单号 WBP895977 · 凭证号见 Klook App",
+          "所有券须一同兑换"
+        ]
+      },
+      {
+        "id": "ticket-skydive-nzone",
+        "name": "皇后镇高空跳伞体验（NZONE 提供）",
+        "day": 9,
+        "requirement": "advance-required",
+        "purchaseStatus": "purchased",
+        "guidance": [
+          "10-03 06:00 · 15,000 英尺高空跳伞",
+          "预订人 LIU*** · 1 人",
+          "Klook 订单号 CRW103472 · 凭证号 KLK2015731265",
+          "所有券须一同兑换"
+        ]
+      }
+    ]
   },
   "preTrip": {
     "packingItems": [
