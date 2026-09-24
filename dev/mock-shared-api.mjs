@@ -34,6 +34,8 @@ const TABLES = {
   tickets: "trip_tickets",
   itinerary: "trip_itinerary",
   flights: "trip_flights",
+  accommodations: "trip_accommodations",
+  ticketPlans: "trip_ticket_plans",
   diningRestaurants: "dining_restaurants",
   diningRecords: "dining_records"
 };

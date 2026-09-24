@@ -26,13 +26,18 @@ const has = (relative) => existsSync(path.join(repoRoot, relative));
 
 /* ---------- 1. trip-data.json parses and its config is coherent ---------- */
 const MODULE_NAMES = ["flights", "overview", "itinerary", "todo", "driving", "ledger"];
-const KNOWN_SHARED = new Set(["todos", "tickets", "itinerary", "flights", "ledger", "dining"]);
-/* sharedCollection -> module that must be enabled, and the record collections it maps to */
+const KNOWN_SHARED = new Set([
+  "todos", "tickets", "itinerary", "flights", "accommodations", "ticketPlans", "ledger", "dining"
+]);
+/* sharedCollection -> module that must be enabled, and the record collections it maps to.
+   module: null = 没有模块开关、常驻显示（住宿 / 门票明细 / 餐饮）。 */
 const SHARED_REQUIREMENTS = {
   todos: { module: "todo", collections: ["todos"] },
   tickets: { module: "itinerary", collections: ["tickets"] },
   itinerary: { module: "itinerary", collections: ["itinerary"] },
   flights: { module: "flights", collections: ["flights"] },
+  accommodations: { module: null, collections: ["accommodations"] },
+  ticketPlans: { module: null, collections: ["ticketPlans"] },
   ledger: { module: "ledger", collections: ["bills", "travelers"] },
   dining: { module: null, collections: ["diningRestaurants", "diningRecords"] }
 };

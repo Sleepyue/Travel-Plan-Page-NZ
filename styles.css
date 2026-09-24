@@ -562,8 +562,25 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 .focus-done { display: block; margin-top: 6px; font-size: 20px; font-weight: 760; }
 
 /* DIY add-on: travel-prep category filter bar (mirrors route-explorer tabs) */
-.todo-filter-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 14px 0 2px; }
-.todo-filter-tabs button { border: 0; background: transparent; padding: 7px 12px; font-size: 12px; border-radius: 999px; cursor: pointer; color: var(--muted); font-weight: 700; transition: background .15s ease, color .15s ease; }
+/* 责任人筛选 + 物品类型筛选两栏下滑后一起吸附在顶栏下方（2026-09-24 第六轮）。
+   类型筛选改成单行横向滚动：换行的话吸顶栏在手机上会有三四行高。 */
+.todo-filter-dock {
+  position: sticky;
+  top: calc(48px + var(--safe-top));
+  z-index: 14;
+  margin: 14px -18px 0;
+  padding: 10px 18px 8px;
+  background: rgba(243, 246, 242, .95);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.todo-filter-dock .todo-owners { margin: 0; }
+.todo-filter-dock .todo-filter-tabs { margin: 10px 0 0; }
+
+.todo-filter-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; margin: 14px 0 2px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; }
+.todo-filter-tabs::-webkit-scrollbar { display: none; }
+.todo-filter-tabs button { flex: 0 0 auto; border: 0; background: transparent; padding: 7px 12px; font-size: 12px; border-radius: 999px; cursor: pointer; color: var(--muted); font-weight: 700; transition: background .15s ease, color .15s ease; }
 .todo-filter-tabs button:hover { color: var(--ink); }
 .todo-filter-tabs button[aria-pressed="true"] { background: var(--ink); color: white; }
 
@@ -793,8 +810,35 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 }
 
 /* 总览 + DAY01-DAY11 单天查看按键（需求②b） */
-.itinerary-view-tabs { margin: 0 0 16px; display: flex; gap: 6px; flex-wrap: wrap; }
-.itinerary-view-tabs button { min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.8); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 720; transition: border-color .15s ease, color .15s ease, background .15s ease; }
+/* 每日行程下的两个小模块：新增行程 / 行程列表（2026-09-24 第六轮拆出）。 */
+.itinerary-block { margin-top: 28px; }
+.itinerary-block:first-of-type { margin-top: 6px; }
+.itinerary-block__heading { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.itinerary-block__kicker { margin: 0; color: var(--lake); font: 750 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; }
+.itinerary-block__heading h3 { margin: 4px 0 0; font-size: 19px; font-weight: 780; letter-spacing: -.02em; }
+
+/* 行程列表的按天导航：下滑后吸附在顶栏下方。
+   横向滚动而不是换行 —— 12 个按键换行会有三四行，吸顶后会把可视区吃掉一大块。
+   注意 sticky 的祖先链上不能有 overflow: hidden/auto/scroll（main 用的是 overflow-x: clip）。 */
+.itinerary-view-tabs {
+  position: sticky;
+  top: calc(48px + var(--safe-top));
+  z-index: 14;
+  margin: 0 -18px 16px;
+  padding: 10px 18px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  background: rgba(243, 246, 242, .95);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.itinerary-view-tabs::-webkit-scrollbar { display: none; }
+.itinerary-view-tabs button { flex: 0 0 auto; min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.8); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 720; transition: border-color .15s ease, color .15s ease, background .15s ease; }
 .itinerary-view-tabs button:hover { color: var(--ink); }
 .itinerary-view-tabs button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
 
@@ -818,11 +862,60 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 .stay-card .stay-card__dates { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: #b8cccf; font-size: var(--stay-line-size); font-weight: 700; line-height: 1.3; font-variant-numeric: tabular-nums; }
 .stay-card__dates b { margin-left: auto; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.14); color: #d9edf0; font-size: 11px; }
 .stay-card__note { margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
+
+/* 备注按逗号拆成多行：整段顶部一句「相关信息：」，下面一行一条。 */
+.stay-card__info { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.16); }
+.stay-card__info-label { margin: 0 0 6px; color: #9fd0d8; font-size: 11px; font-weight: 760; letter-spacing: .04em; }
+.stay-card__info-list { margin: 0; padding: 0; display: grid; gap: 4px; list-style: none; }
+.stay-card__info-list li { position: relative; padding-left: 11px; color: #cfdfe2; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.stay-card__info-list li::before { content: ""; position: absolute; left: 0; top: 8px; width: 4px; height: 4px; border-radius: 50%; background: #6f9aa3; }
+
+/* 住宿卡片底部：编辑入口 */
+.stay-card__actions { margin-top: auto; padding-top: 14px; display: flex; justify-content: flex-end; }
+.stay-card__action { min-height: 38px; padding: 0 14px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; color: #e6f2f4; background: rgba(255,255,255,.08); cursor: pointer; font-size: 12px; font-weight: 740; }
+.stay-card__action:hover { border-color: #8fc6d0; background: rgba(255,255,255,.16); }
+.stay-card__action i, .ticketplan-card__edit i { margin-left: 6px; color: #e0a983; font-style: normal; font-size: 10px; }
+
+/* 住宿 / 门票的行内编辑表单（卡片是深色底，表单也按深色做）。 */
+.stay-editor, .ticketplan-editor { width: 100%; margin-top: 14px; padding: 14px; display: grid; gap: 10px; border: 1px solid rgba(255,255,255,.18); border-radius: 14px; background: rgba(255,255,255,.06); }
+.stay-editor__head, .ticketplan-editor__head { margin: 0; color: #9fd0d8; font-size: 11px; font-weight: 760; letter-spacing: .06em; }
+.stay-editor__grid, .ticketplan-editor__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.stay-editor label, .ticketplan-editor label { display: grid; gap: 5px; min-width: 0; }
+.stay-editor label > span, .ticketplan-editor label > span { color: #a9c3c8; font-size: 11px; font-weight: 700; }
+.stay-editor label > span small, .ticketplan-editor label > span small { color: #7f9ba1; font-weight: 600; }
+.stay-editor input, .stay-editor textarea,
+.ticketplan-editor input, .ticketplan-editor textarea, .ticketplan-editor select {
+  width: 100%; min-height: 40px; padding: 8px 11px; border: 1px solid rgba(255,255,255,.22); border-radius: 10px;
+  color: #eff8f8; background: rgba(9,22,28,.5); font: inherit; font-size: 13px; outline: none;
+}
+.stay-editor textarea, .ticketplan-editor textarea { min-height: 74px; resize: vertical; line-height: 1.5; }
+.stay-editor input:focus, .stay-editor textarea:focus,
+.ticketplan-editor input:focus, .ticketplan-editor textarea:focus, .ticketplan-editor select:focus {
+  border-color: #8fc6d0; box-shadow: 0 0 0 3px rgba(143,198,208,.18);
+}
+.stay-editor__actions, .ticketplan-editor__actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.stay-editor__actions button, .ticketplan-editor__actions button { min-height: 40px; padding: 0 16px; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; color: #e6f2f4; background: transparent; cursor: pointer; font-size: 12px; font-weight: 740; }
+.stay-editor__actions button[type="submit"], .ticketplan-editor__actions button[type="submit"] { border-color: transparent; color: #0d2027; background: #8fc6d0; }
+.stay-editor__actions .stay-editor__reset, .ticketplan-editor__actions .ticketplan-editor__reset { margin-right: auto; border-color: rgba(224,169,131,.45); color: #e0a983; }
+
+/* 门票卡片：日期 + 行程内容放大字号，其余（预订人 / 订单号 / 凭证…）归入「相关信息」。 */
 .ticketplan-card { display: flex; flex-direction: column; align-items: flex-start; }
-.ticketplan-card__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.ticketplan-card__date { margin-top: 10px; color: #e0a983; font: 760 clamp(17px, 4.8vw, 21px)/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.ticketplan-card__event { margin-top: 6px; color: #fff; font-size: clamp(17px, 4.8vw, 21px); font-weight: 740; line-height: 1.35; overflow-wrap: anywhere; }
+.ticketplan-card__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .ticketplan-card__status { padding: 3px 9px; border-radius: 999px; font-size: 10px; font-weight: 760; background: #f6e2d8; color: #8f492e; }
 .ticketplan-card.is-purchased .ticketplan-card__status { background: #dfeade; color: #3f6347; }
-.ticketplan-card .schedule-ticket__open { margin-top: 12px; min-height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--ink); color: #fff; cursor: pointer; font-size: 11px; font-weight: 750; }
+.ticketplan-card__info { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.16); width: 100%; }
+.ticketplan-card__info-label { margin: 0 0 6px; color: #9fd0d8; font-size: 11px; font-weight: 760; letter-spacing: .04em; }
+.ticketplan-card__info ul { margin: 0; padding: 0; display: grid; gap: 4px; list-style: none; }
+.ticketplan-card__info li { position: relative; padding-left: 11px; color: #cfdfe2; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.ticketplan-card__info li::before { content: ""; position: absolute; left: 0; top: 8px; width: 4px; height: 4px; border-radius: 50%; background: #6f9aa3; }
+.ticketplan-card__actions { margin-top: auto; padding-top: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* 原来的详情按钮用了 background: var(--ink)，和卡片底色完全一样 → 在深色卡片上看不见。
+   这里改成实心浅色，编辑按钮用描边。 */
+.ticketplan-card .schedule-ticket__open { margin-top: 0; min-height: 38px; padding: 0 16px; border: 0; border-radius: 999px; background: #8fc6d0; color: #0d2027; cursor: pointer; font-size: 12px; font-weight: 760; }
+.ticketplan-card__edit { min-height: 38px; padding: 0 14px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; color: #e6f2f4; background: rgba(255,255,255,.08); cursor: pointer; font-size: 12px; font-weight: 740; }
+.ticketplan-card__edit:hover { border-color: #8fc6d0; background: rgba(255,255,255,.16); }
 
 /* ===== 行前准备：分类批量设置责任人（需求 2）===== */
 .todo-group__tools { display: flex; align-items: center; gap: 8px; }

@@ -21,6 +21,11 @@ const state = {
      与 itinerary 同构：删掉记录即回到基线，因此不需要墓碑。 */
   flights: [],
   editingFlightId: null,
+  /* 住宿 / 门票明细覆盖层：与航班同构（基线在 trip-data.json，共享层按 id 存覆盖）。 */
+  accommodations: [],
+  ticketPlans: [],
+  editingStayId: null,
+  editingTicketPlanId: null,
   /* 天气基线（trip-data.json 原始预报）与上次更新时间：「更新天气」只改 state.data.weather，
      反复点更新时始终以基线为起点，避免逐次叠加。 */
   authoredWeather: null,
@@ -34,7 +39,9 @@ const MODULE_NAMES = Object.freeze(["flights", "overview", "itinerary", "todo", 
    while "ledger"/"dining" name whole modules whose tables ledger.js and dining.js own.
    The allowlist is validated verbatim against trip-data.json, so entries have to match
    exactly what that file declares. */
-const SHARED_COLLECTIONS = Object.freeze(["todos", "tickets", "itinerary", "flights", "ledger", "dining"]);
+const SHARED_COLLECTIONS = Object.freeze([
+  "todos", "tickets", "itinerary", "flights", "accommodations", "ticketPlans", "ledger", "dining"
+]);
 
 function normalizeTripConfig(raw = {}) {
   if (!raw || typeof raw !== "object" || raw.schemaVersion !== "1.0.0") throw new Error("trip-data.json config.schemaVersion must be 1.0.0");
@@ -456,6 +463,96 @@ function resetFlightRecord(flightId) {
   saveSharedChange("flights", { id }, "delete").catch(console.error);
 }
 
+/* ===== 住宿编辑：trip-data.json 的 accommodations[] 是基线，共享层按 id 存覆盖 =====
+   与航班同构：删掉覆盖记录即回到基线，所以不需要墓碑。 */
+
+function normalizeStayRecord(raw) {
+  const id = String(raw?.id || "").trim().slice(0, 60);
+  if (!id) return null;
+  const record = { id };
+  if (typeof raw.city === "string") record.city = raw.city.trim().slice(0, 30);
+  if (typeof raw.name === "string" && raw.name.trim()) record.name = raw.name.trim().slice(0, 120);
+  for (const key of ["checkIn", "checkOut"]) {
+    const value = raw?.[key];
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) record[key] = value.trim();
+  }
+  if (typeof raw.note === "string") record.note = raw.note.trim().slice(0, 400);
+  return record;
+}
+
+function mergedAccommodations() {
+  const overrides = new Map((state.accommodations || []).map((row) => [String(row.id), row]));
+  return (state.data?.accommodations || []).map((base) => {
+    const patch = overrides.get(String(base.id));
+    return patch ? { ...base, ...patch } : base;
+  });
+}
+
+function stayIsEdited(stayId) {
+  return (state.accommodations || []).some((row) => String(row.id) === String(stayId));
+}
+
+function saveStayRecord(stayId, patch) {
+  const id = String(stayId);
+  const record = { id, ...patch };
+  const index = state.accommodations.findIndex((row) => String(row.id) === id);
+  if (index >= 0) state.accommodations[index] = record;
+  else state.accommodations.push(record);
+  saveSharedChange("accommodations", record).catch(console.error);
+}
+
+function resetStayRecord(stayId) {
+  const id = String(stayId);
+  state.accommodations = state.accommodations.filter((row) => String(row.id) !== id);
+  saveSharedChange("accommodations", { id }, "delete").catch(console.error);
+}
+
+/* ===== 门票明细编辑：基线在 trip-data.json 的 ticketPlanning.items，共享层按 id 存覆盖 ===== */
+
+function normalizeTicketPlanRecord(raw) {
+  const id = String(raw?.id || "").trim().slice(0, 60);
+  if (!id) return null;
+  const record = { id };
+  if (typeof raw.name === "string" && raw.name.trim()) record.name = raw.name.trim().slice(0, 120);
+  const day = Number(raw.day);
+  if (Number.isSafeInteger(day) && day > 0 && day <= 60) record.day = day;
+  if (typeof raw.requirement === "string" && raw.requirement.trim()) record.requirement = raw.requirement.trim().slice(0, 40);
+  if (typeof raw.purchaseStatus === "string" && raw.purchaseStatus.trim()) record.purchaseStatus = raw.purchaseStatus.trim().slice(0, 20);
+  if (typeof raw.date === "string") record.date = raw.date.trim().slice(0, 40);
+  if (typeof raw.event === "string") record.event = raw.event.trim().slice(0, 200);
+  if (Array.isArray(raw.info)) {
+    record.info = raw.info.map((line) => String(line || "").trim().slice(0, 160)).filter(Boolean).slice(0, 12);
+  }
+  return record;
+}
+
+function mergedTicketPlans() {
+  const overrides = new Map((state.ticketPlans || []).map((row) => [String(row.id), row]));
+  return (state.data?.ticketPlanning?.items || []).map((base) => {
+    const patch = overrides.get(String(base.id));
+    return patch ? { ...base, ...patch } : base;
+  });
+}
+
+function ticketPlanIsEdited(ticketId) {
+  return (state.ticketPlans || []).some((row) => String(row.id) === String(ticketId));
+}
+
+function saveTicketPlanRecord(ticketId, patch) {
+  const id = String(ticketId);
+  const record = { id, ...patch };
+  const index = state.ticketPlans.findIndex((row) => String(row.id) === id);
+  if (index >= 0) state.ticketPlans[index] = record;
+  else state.ticketPlans.push(record);
+  saveSharedChange("ticketPlans", record).catch(console.error);
+}
+
+function resetTicketPlanRecord(ticketId) {
+  const id = String(ticketId);
+  state.ticketPlans = state.ticketPlans.filter((row) => String(row.id) !== id);
+  saveSharedChange("ticketPlans", { id }, "delete").catch(console.error);
+}
+
 function journeyStatusAndTarget(flights) {
   const now = new Date();
   for (const flight of flights) {
@@ -720,7 +817,7 @@ function costText(cost) {
 
 function ticketsForDay(day) {
   if (!moduleEnabled("itinerary")) return [];
-  return (state.data.ticketPlanning?.items || []).filter((ticket) =>
+  return mergedTicketPlans().filter((ticket) =>
     ticket.dayId ? ticket.dayId === day.id : ticket.day === day.day
   );
 }
@@ -753,9 +850,33 @@ function ticketTitle(ticket) {
   return ticket.name || ticket.attraction?.nameZh || ticket.attraction?.name || "门票详情";
 }
 
+/* 门票的结构化明细：优先用 date / event / info 三个字段；缺失时从老的 guidance 数组
+   按「·」拆分派生，保证两种写法（老数据、外部导入）都能渲染。 */
+function ticketDetail(ticket) {
+  const raw = ticket.guidance ?? ticket.notes;
+  const guidance = Array.isArray(raw)
+    ? raw.map((line) => String(line || "").trim()).filter(Boolean)
+    : (raw ? [String(raw).trim()] : []);
+  let date = String(ticket.date || "").trim();
+  let event = String(ticket.event || "").trim();
+  if ((!date || !event) && guidance.length) {
+    const parts = guidance[0].split(/\s*·\s*/).map((part) => part.trim()).filter(Boolean);
+    if (!date) date = parts[0] || "";
+    if (!event) event = parts.slice(1).join(" · ") || "";
+  }
+  const derived = guidance.slice(1)
+    .flatMap((line) => line.split(/\s*·\s*/).map((part) => part.trim()).filter(Boolean));
+  const info = Array.isArray(ticket.info)
+    ? ticket.info.map((line) => String(line || "").trim()).filter(Boolean)
+    : derived;
+  return { date, event, info };
+}
+
+/* 对话框与行程内联徽标仍用一行纯文本：日期 · 行程内容 + 相关信息逐条。 */
 function ticketGuidance(ticket) {
-  const guidance = ticket.guidance || ticket.notes || [];
-  return Array.isArray(guidance) ? guidance.join("·") : String(guidance || "");
+  const { date, event, info } = ticketDetail(ticket);
+  const headline = date && event ? `${date} · ${event}` : (date || event);
+  return [headline, ...info].filter(Boolean).join("·");
 }
 
 function ticketDocument(ticket) {
@@ -968,14 +1089,24 @@ function scheduleItemMarkup(day, item) {
     </li>`;
 }
 
-/* 查看按键：总览 + DAY01-DAY11 单天查看（需求②b）。 */
+/* 单天按键的标签用「9.25」这种 月.日（2026-09-24 第六轮）—— 比 DAY 01 一眼就知道是哪天。 */
+function dayTabLabel(dateString) {
+  const match = String(dateString || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${Number(match[2])}.${Number(match[3])}` : String(dateString || "");
+}
+
+/* 查看按键：总览 + 9.25…10.5 单天查看（需求②b）。 */
 function renderItineraryViewTabs(days) {
   const container = $("#itinerary-view-tabs");
   if (!container) return;
   const view = String(state.itineraryView);
-  const tabs = [["all", "总览"], ...days.map((day) => [String(day.day), `DAY ${String(day.day).padStart(2, "0")}`])];
-  container.innerHTML = tabs.map(([value, label]) =>
-    `<button type="button" data-itinerary-view="${value}" aria-pressed="${view === value}">${escapeHtml(label)}</button>`).join("");
+  const tabs = [["all", "总览", "全部行程"], ...days.map((day) => [
+    String(day.day),
+    dayTabLabel(day.date),
+    `DAY ${String(day.day).padStart(2, "0")} · ${formatCompactDate(day.date)}`
+  ])];
+  container.innerHTML = tabs.map(([value, label, title]) =>
+    `<button type="button" data-itinerary-view="${value}" aria-pressed="${view === value}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(label)}</button>`).join("");
   container.onclick = (event) => {
     const button = event.target.closest("[data-itinerary-view]");
     if (!button) return;
@@ -1367,10 +1498,13 @@ function createRuntimeAdapters() {
     todos: "todo",
     tickets: "itinerary",
     itinerary: "itinerary",
-    flights: "flights"
+    flights: "flights",
+    /* 住宿 / 门票明细和「天气」一样没有模块开关、常驻显示，所以恒启用（null = 不依赖开关）。 */
+    accommodations: null,
+    ticketPlans: null
   };
   const enabledCollections = Object.entries(COLLECTION_MODULES)
-    .filter(([, moduleName]) => moduleEnabled(moduleName))
+    .filter(([, moduleName]) => !moduleName || moduleEnabled(moduleName))
     .map(([collection]) => collection);
   const localCollections = enabledCollections.filter((collection) => persistence.mode !== "d1" || !sharedCollections.has(collection));
   const d1Collections = enabledCollections.filter((collection) => persistence.mode === "d1" && sharedCollections.has(collection));
@@ -1405,6 +1539,12 @@ async function loadSharedState() {
   const flightSnapshot = snapshotFor("flights");
   state.flights = (Array.isArray(flightSnapshot.flights) ? flightSnapshot.flights : [])
     .map(normalizeFlightRecord).filter(Boolean);
+  const accommodationSnapshot = snapshotFor("accommodations");
+  state.accommodations = (Array.isArray(accommodationSnapshot.accommodations) ? accommodationSnapshot.accommodations : [])
+    .map(normalizeStayRecord).filter(Boolean);
+  const ticketPlanSnapshot = snapshotFor("ticketPlans");
+  state.ticketPlans = (Array.isArray(ticketPlanSnapshot.ticketPlans) ? ticketPlanSnapshot.ticketPlans : [])
+    .map(normalizeTicketPlanRecord).filter(Boolean);
   state.purchasedTickets = new Set((Array.isArray(ticketSnapshot.tickets) ? ticketSnapshot.tickets : []).filter((item) => item.completed).map((item) => item.id));
   const authoredTodos = state.data.preTrip?.todoItems || state.data.preTrip?.packingItems || [];
   const sourceById = new Map(authoredTodos.map((item) => [String(item.id || ""), item]));
@@ -1836,7 +1976,7 @@ function localAssetUrl(value) {
 let ticketDialogOpener = null;
 
 function openTicketDialog(ticketId, opener) {
-  const ticket = state.data.ticketPlanning?.items?.find((item) => item.id === ticketId);
+  const ticket = mergedTicketPlans().find((item) => item.id === ticketId);
   const dialog = $("#ticket-dialog");
   if (!ticket || !dialog) return;
   ticketDialogOpener = opener || null;
@@ -2105,8 +2245,34 @@ function stayNights(accommodation) {
   return Math.max(Math.round((checkOut - checkIn) / 86400000), 0);
 }
 
+/* 备注按逗号（中英文都算）拆成多行展示 —— 一条信息一行，手机上好读。 */
+function stayNoteLines(note) {
+  return String(note || "").split(/[,，]/).map((line) => line.trim()).filter(Boolean);
+}
+
+function stayEditorMarkup(accommodation) {
+  return `
+    <form class="stay-editor" data-stay-form="${escapeHtml(accommodation.id)}">
+      <p class="stay-editor__head">编辑住宿</p>
+      <div class="stay-editor__grid">
+        <label><span>城市</span><input name="city" type="text" maxlength="30" value="${escapeHtml(accommodation.city || "")}"></label>
+        <label><span>名称</span><input name="name" type="text" maxlength="120" value="${escapeHtml(accommodation.name || "")}" required></label>
+        <label><span>入住</span><input name="checkIn" type="date" value="${escapeHtml(accommodation.checkIn || "")}" required></label>
+        <label><span>退房</span><input name="checkOut" type="date" value="${escapeHtml(accommodation.checkOut || "")}" required></label>
+      </div>
+      <label class="stay-editor__note"><span>备注 <small>用逗号分隔，每个逗号显示为一行</small></span><textarea name="note" rows="3" maxlength="400">${escapeHtml(accommodation.note || "")}</textarea></label>
+      <div class="stay-editor__actions">
+        ${stayIsEdited(accommodation.id) ? `<button type="button" class="stay-editor__reset" data-stay-reset="${escapeHtml(accommodation.id)}">还原原始信息</button>` : ""}
+        <button type="button" data-stay-cancel>取消</button>
+        <button type="submit">保存</button>
+      </div>
+    </form>`;
+}
+
 function stayCard(accommodation, index, total) {
   const nights = stayNights(accommodation);
+  const noteLines = stayNoteLines(accommodation.note);
+  const editing = state.editingStayId === accommodation.id;
   return `
     <article class="flight-card stay-card" data-stay="${escapeHtml(accommodation.id)}">
       <div class="flight-card__top"><span>STAY ${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}</span></div>
@@ -2118,48 +2284,176 @@ function stayCard(accommodation, index, total) {
         <span>退房 ${escapeHtml(formatCompactDate(accommodation.checkOut))}</span>
         ${nights != null ? `<b>${nights} 晚</b>` : ""}
       </div>
-      ${accommodation.note ? `<p class="stay-card__note">${escapeHtml(accommodation.note)}</p>` : ""}
+      ${noteLines.length ? `
+        <div class="stay-card__info">
+          <p class="stay-card__info-label">相关信息：</p>
+          <ul class="stay-card__info-list">${noteLines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+        </div>` : ""}
+      <div class="stay-card__actions">
+        <button type="button" class="stay-card__action" data-stay-edit="${escapeHtml(accommodation.id)}" aria-expanded="${editing ? "true" : "false"}">✎ 编辑${stayIsEdited(accommodation.id) ? "<i>已改</i>" : ""}</button>
+      </div>
+      ${editing ? stayEditorMarkup(accommodation) : ""}
     </article>`;
 }
 
 function renderStay() {
   const carousel = $("#stay-carousel");
   if (!carousel) return;
-  const list = state.data.accommodations || [];
+  const list = mergedAccommodations();
   carousel.innerHTML = list.length
     ? list.map((item, index) => stayCard(item, index, list.length)).join("")
     : `<article class="flight-card flight-card--placeholder"><div class="flight-placeholder"><span class="flight-placeholder__eyebrow">资料待补充</span><h3>住宿信息待补充</h3><p>系统没有猜测或伪造缺失的住宿事实。</p></div></article>`;
   $("#stay-index").textContent = `1 / ${Math.max(list.length, 1)}`;
   bindSimpleCarousel("stay-carousel", "stay-dots", "stay-index", Math.max(list.length, 1));
+  /* 重渲染后要重新绑定，所以一律用 on* 赋值（与航班卡片同理）。 */
+  carousel.onclick = (event) => {
+    const editButton = event.target.closest("[data-stay-edit]");
+    if (editButton) {
+      const id = editButton.dataset.stayEdit;
+      state.editingStayId = state.editingStayId === id ? null : id;
+      renderStay();
+      return;
+    }
+    if (event.target.closest("[data-stay-cancel]")) {
+      state.editingStayId = null;
+      renderStay();
+      return;
+    }
+    const resetButton = event.target.closest("[data-stay-reset]");
+    if (resetButton) {
+      resetStayRecord(resetButton.dataset.stayReset);
+      state.editingStayId = null;
+      renderStay();
+    }
+  };
+  carousel.onsubmit = (event) => {
+    const form = event.target.closest("[data-stay-form]");
+    if (!form) return;
+    event.preventDefault();
+    const formData = new FormData(form);
+    const read = (key) => String(formData.get(key) || "").trim();
+    if (!read("name") || !read("checkIn") || !read("checkOut")) return;
+    saveStayRecord(form.dataset.stayForm, {
+      city: read("city"),
+      name: read("name"),
+      checkIn: read("checkIn"),
+      checkOut: read("checkOut"),
+      note: read("note")
+    });
+    state.editingStayId = null;
+    renderStay();
+  };
+}
+
+function ticketPlanEditorMarkup(ticket) {
+  const { date, event, info } = ticketDetail(ticket);
+  const days = state.data.days || [];
+  return `
+    <form class="ticketplan-editor" data-ticket-plan-form="${escapeHtml(ticket.id)}">
+      <p class="ticketplan-editor__head">编辑门票</p>
+      <label><span>名称</span><input name="name" type="text" maxlength="120" value="${escapeHtml(ticket.name || "")}" required></label>
+      <div class="ticketplan-editor__grid">
+        <label><span>行程日</span>
+          <select name="day">${days.map((day) => `<option value="${day.day}" ${Number(ticket.day) === day.day ? "selected" : ""}>DAY ${String(day.day).padStart(2, "0")} · ${escapeHtml(formatCompactDate(day.date))}</option>`).join("")}</select>
+        </label>
+        <label><span>购票状态</span>
+          <select name="purchaseStatus">
+            <option value="purchased" ${ticket.purchaseStatus === "purchased" ? "selected" : ""}>已购票</option>
+            <option value="pending" ${ticket.purchaseStatus !== "purchased" ? "selected" : ""}>未购票</option>
+          </select>
+        </label>
+      </div>
+      <label><span>日期</span><input name="date" type="text" maxlength="40" value="${escapeHtml(date)}" placeholder="09-28 10:30"></label>
+      <label><span>行程内容</span><input name="event" type="text" maxlength="200" value="${escapeHtml(event)}" placeholder="25 分钟直升机观光飞行"></label>
+      <label><span>相关信息 <small>每行一条</small></span><textarea name="info" rows="4" maxlength="1600">${escapeHtml(info.join("\n"))}</textarea></label>
+      <div class="ticketplan-editor__actions">
+        ${ticketPlanIsEdited(ticket.id) ? `<button type="button" class="ticketplan-editor__reset" data-ticket-plan-reset="${escapeHtml(ticket.id)}">还原原始信息</button>` : ""}
+        <button type="button" data-ticket-plan-cancel>取消</button>
+        <button type="submit">保存</button>
+      </div>
+    </form>`;
 }
 
 function renderTickets() {
   const carousel = $("#tickets-carousel");
   if (!carousel) return;
-  const items = state.data.ticketPlanning?.items || [];
+  const items = mergedTicketPlans();
   carousel.innerHTML = items.length
     ? items.map((ticket, index) => ticketPlanCard(ticket, index, items.length)).join("")
     : `<article class="flight-card flight-card--placeholder"><div class="flight-placeholder"><span class="flight-placeholder__eyebrow">资料待补充</span><h3>门票信息待补充</h3><p>确定要预约的景点后，在 trip-data.json 的 ticketPlanning.items 里补充名称、日期与购票要求，这里会自动生成卡片。</p></div></article>`;
   $("#tickets-index").textContent = `1 / ${Math.max(items.length, 1)}`;
   bindSimpleCarousel("tickets-carousel", "tickets-dots", "tickets-index", Math.max(items.length, 1));
   carousel.onclick = (event) => {
-    const button = event.target.closest("[data-ticket-open]");
-    if (button) openTicketDialog(button.dataset.ticketOpen, button);
+    const openButton = event.target.closest("[data-ticket-open]");
+    if (openButton) {
+      openTicketDialog(openButton.dataset.ticketOpen, openButton);
+      return;
+    }
+    const editButton = event.target.closest("[data-ticket-plan-edit]");
+    if (editButton) {
+      const id = editButton.dataset.ticketPlanEdit;
+      state.editingTicketPlanId = state.editingTicketPlanId === id ? null : id;
+      renderTickets();
+      return;
+    }
+    if (event.target.closest("[data-ticket-plan-cancel]")) {
+      state.editingTicketPlanId = null;
+      renderTickets();
+      return;
+    }
+    const resetButton = event.target.closest("[data-ticket-plan-reset]");
+    if (resetButton) {
+      resetTicketPlanRecord(resetButton.dataset.ticketPlanReset);
+      state.editingTicketPlanId = null;
+      renderTickets();
+    }
+  };
+  carousel.onsubmit = (event) => {
+    const form = event.target.closest("[data-ticket-plan-form]");
+    if (!form) return;
+    event.preventDefault();
+    const formData = new FormData(form);
+    const read = (key) => String(formData.get(key) || "").trim();
+    if (!read("name")) return;
+    saveTicketPlanRecord(form.dataset.ticketPlanForm, {
+      name: read("name"),
+      day: Number(read("day")) || undefined,
+      purchaseStatus: read("purchaseStatus"),
+      date: read("date"),
+      event: read("event"),
+      info: read("info").split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    });
+    state.editingTicketPlanId = null;
+    renderTickets();
+    renderTimeline();
   };
 }
 
+/* 门票卡片：日期与行程内容放大字号，其余（预订人 / 订单号 / 凭证 …）归入「相关信息」。 */
 function ticketPlanCard(ticket, index, total) {
   const purchased = isTicketPurchased(ticket);
+  const { date, event, info } = ticketDetail(ticket);
+  const editing = state.editingTicketPlanId === ticket.id;
   return `
     <article class="flight-card ticketplan-card${purchased ? " is-purchased" : ""}" data-plan-ticket="${escapeHtml(ticket.id)}">
       <div class="flight-card__top"><span>TICKET ${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}</span></div>
       <div class="stay-card__name">${escapeHtml(ticketTitle(ticket))}</div>
+      ${date ? `<div class="ticketplan-card__date">${escapeHtml(date)}</div>` : ""}
+      ${event ? `<div class="ticketplan-card__event">${escapeHtml(event)}</div>` : ""}
       <div class="ticketplan-card__meta">
         <span class="ticketplan-card__status">${purchased ? "已购票" : escapeHtml(ticketRequirement(ticket))}</span>
         ${ticket.day ? `<span>DAY ${String(ticket.day).padStart(2, "0")}</span>` : ""}
       </div>
-      ${ticketGuidance(ticket) ? `<p class="stay-card__note">${escapeHtml(ticketGuidance(ticket))}</p>` : ""}
-      <button type="button" class="schedule-ticket__open" data-ticket-open="${escapeHtml(ticket.id)}" aria-haspopup="dialog" aria-controls="ticket-dialog">查看详情</button>
+      ${info.length ? `
+        <div class="ticketplan-card__info">
+          <p class="ticketplan-card__info-label">相关信息：</p>
+          <ul>${info.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>
+        </div>` : ""}
+      <div class="ticketplan-card__actions">
+        <button type="button" class="schedule-ticket__open" data-ticket-open="${escapeHtml(ticket.id)}" aria-haspopup="dialog" aria-controls="ticket-dialog">查看详情</button>
+        <button type="button" class="ticketplan-card__edit" data-ticket-plan-edit="${escapeHtml(ticket.id)}" aria-expanded="${editing ? "true" : "false"}">✎ 编辑${ticketPlanIsEdited(ticket.id) ? "<i>已改</i>" : ""}</button>
+      </div>
+      ${editing ? ticketPlanEditorMarkup(ticket) : ""}
     </article>`;
 }
 

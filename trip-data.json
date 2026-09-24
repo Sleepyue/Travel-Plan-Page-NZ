@@ -15,7 +15,7 @@
     "persistence": {
       "mode": "d1",
       "apiBase": "/api/trip",
-      "sharedCollections": ["todos", "tickets", "itinerary", "flights", "ledger", "dining"]
+      "sharedCollections": ["todos", "tickets", "itinerary", "flights", "accommodations", "ticketPlans", "ledger", "dining"]
     }
   },
   "metadata": {

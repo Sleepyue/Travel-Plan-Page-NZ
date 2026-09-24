@@ -32,7 +32,7 @@
   let tripCities = [...DEFAULT_CITIES];
   let tripDays = [];
   let activeTab = "restaurants";
-  let cityFilter = "all";
+  let diningFilter = "all";
   let notice = "";
   let editingRecordId = "";
   let editingRestaurantId = "";
@@ -302,9 +302,35 @@
     return [...found];
   }
 
-  function filteredRecords() {
-    return cityFilter === "all" ? data.records : data.records.filter((record) => record.city === cityFilter);
+  /* 筛选值：all（全部）/ checked（打卡）/ starred（收藏）/ 具体城市名。
+     打卡、收藏只对餐厅明细有意义；饮食明细只认城市，遇到标记筛选时按「全部记录」处理。 */
+  const FLAG_FILTERS = Object.freeze([
+    ["all", "全部"],
+    ["checked", "打卡"],
+    ["starred", "收藏"]
+  ]);
+  const FLAG_FILTER_NAMES = new Set(FLAG_FILTERS.map(([value]) => value));
+
+  function filteredRestaurants() {
+    if (diningFilter === "checked") return data.restaurants.filter((restaurant) => restaurant.checkedIn);
+    if (diningFilter === "starred") return data.restaurants.filter((restaurant) => restaurant.starred);
+    if (diningFilter === "all") return [...data.restaurants];
+    return data.restaurants.filter((restaurant) => restaurant.city === diningFilter);
   }
+
+  function filteredRecords() {
+    if (FLAG_FILTER_NAMES.has(diningFilter)) return data.records;
+    return data.records.filter((record) => record.city === diningFilter);
+  }
+
+  /* 当前筛选的可读名字，用于「合计 / 仅看 … / N 家餐厅」这类文案。 */
+  function filterLabel() {
+    const flag = FLAG_FILTERS.find(([value]) => value === diningFilter);
+    return flag ? flag[1] : diningFilter;
+  }
+
+  function filterIsAll() { return diningFilter === "all"; }
+  function filterIsFlag() { return FLAG_FILTER_NAMES.has(diningFilter); }
 
   function totalsByCurrency(records) {
     const totals = new Map();
@@ -325,11 +351,15 @@
 
   /* ---------- markup ---------- */
 
+  /* 筛选栏：全部 / 打卡 / 收藏 / 各城市。
+     对「饮食记录」页签不渲染 —— 那一页只有录入表单，筛选没有意义（2026-09-24 第六轮需求 4b）。 */
   function renderCityNav() {
+    if (activeTab === "record") return "";
     const cities = cityOptions();
-    const buttons = [`<button type="button" data-dining-city="all" aria-pressed="${cityFilter === "all"}">全部</button>`]
-      .concat(cities.map((city) => `<button type="button" data-dining-city="${escapeAttribute(city)}" aria-pressed="${cityFilter === city}">${escapeHtml(city)}</button>`));
-    return `<nav class="dining-city-nav" aria-label="按城市筛选">${buttons.join("")}</nav>`;
+    const buttons = FLAG_FILTERS
+      .map(([value, label]) => `<button type="button" data-dining-city="${value}" aria-pressed="${diningFilter === value}">${label}</button>`)
+      .concat(cities.map((city) => `<button type="button" data-dining-city="${escapeAttribute(city)}" aria-pressed="${diningFilter === city}">${escapeHtml(city)}</button>`));
+    return `<nav class="dining-city-nav" aria-label="筛选餐厅明细">${buttons.join("")}</nav>`;
   }
 
   /* 星标（五角星）/ 打卡（月牙）图标。内联 SVG：emoji 在不同系统上字重和颜色不可控。 */
@@ -407,7 +437,8 @@
   }
 
   function renderRestaurantsPanel() {
-    const restaurants = [...data.restaurants].sort((first, second) =>
+    /* 筛选栏现在真的作用于餐厅明细了（此前只筛记录，点城市没有任何反应）。 */
+    const restaurants = [...filteredRestaurants()].sort((first, second) =>
       (first.city || "").localeCompare(second.city || "", "zh-CN") || first.name.localeCompare(second.name, "zh-CN"));
     return `
       <section class="ledger-tab-panel" data-dining-panel="restaurants" role="tabpanel" aria-labelledby="dining-restaurants-tab" ${activeTab === "restaurants" ? "" : "hidden"}>
@@ -415,12 +446,14 @@
           <div class="ledger-section-heading ledger-list-heading">
             <div>
               <p class="ledger-section-kicker">餐厅明细</p>
-              <h2 id="dining-restaurant-list-title">${restaurants.length ? `${restaurants.length} 家餐厅` : "还没有餐厅"}</h2>
+              <h2 id="dining-restaurant-list-title">${restaurants.length
+                ? `${restaurants.length} 家餐厅${filterIsAll() ? "" : ` · ${escapeHtml(filterLabel())}`}`
+                : (filterIsAll() ? "还没有餐厅" : `没有${escapeHtml(filterLabel())}的餐厅`)}</h2>
             </div>
           </div>
           ${restaurants.length
             ? `<div class="ledger-bill-list">${restaurants.map(renderRestaurantRow).join("")}</div>`
-            : `<div class="ledger-empty-state"><p>导入或手动添加餐厅后，会显示在这里。</p></div>`}
+            : `<div class="ledger-empty-state"><p>${filterIsAll() ? "导入或手动添加餐厅后，会显示在这里。" : "换个筛选条件看看，或者先给餐厅打上标记。"}</p></div>`}
         </section>
 
         <section class="ledger-entry-card" aria-labelledby="dining-add-restaurant-title">
@@ -617,7 +650,7 @@
             <h2 id="dining-record-list-title">${records.length ? `${records.length} 条记录` : "还没有记录"}</h2>
           </div>
           <div class="ledger-list-total">
-            <span>${cityFilter === "all" ? "合计" : escapeHtml(cityFilter)}</span>
+            <span>${filterIsAll() ? "合计" : escapeHtml(filterLabel())}</span>
             <strong>${escapeHtml(totalsByCurrency(records).map(([code, sum]) => formatMoney(sum, code)).join(" · ") || formatMoney(0, "CNY"))}</strong>
           </div>
         </div>
@@ -649,7 +682,7 @@
         <section class="ledger-stats-overview" aria-labelledby="dining-total-title">
           <p class="ledger-section-kicker">饮食明细</p>
           <h2 id="dining-total-title">${escapeHtml(totals.map(([code, sum]) => formatMoney(sum, code)).join(" · ") || formatMoney(0, "CNY"))}</h2>
-          <span>${records.length} 条记录 · 平均评价 ${escapeHtml(averageRating)}${cityFilter === "all" ? "" : ` · 仅看 ${escapeHtml(cityFilter)}`}</span>
+          <span>${records.length} 条记录 · 平均评价 ${escapeHtml(averageRating)}${filterIsAll() || filterIsFlag() ? "" : ` · 仅看 ${escapeHtml(diningFilter)}`}</span>
         </section>
 
         ${groups.length ? groups.map((group) => {
@@ -675,7 +708,7 @@
                   </div>`).join("")}
               </div>
             </section>`;
-        }).join("") : `<div class="ledger-empty-state"><p>${cityFilter === "all" ? "添加饮食记录后，这里会按消费类型汇总。" : `${escapeHtml(cityFilter)} 还没有饮食记录。`}</p></div>`}
+        }).join("") : `<div class="ledger-empty-state"><p>${filterIsAll() || filterIsFlag() ? "添加饮食记录后，这里会按消费类型汇总。" : `${escapeHtml(diningFilter)} 还没有饮食记录。`}</p></div>`}
 
         ${renderSubmittedRecords()}
       </section>`;
@@ -931,7 +964,7 @@
   function handleClick(event) {
     const cityButton = event.target.closest("[data-dining-city]");
     if (cityButton) {
-      cityFilter = cityButton.dataset.diningCity;
+      diningFilter = cityButton.dataset.diningCity;
       renderApp();
       return;
     }

@@ -10,6 +10,8 @@ const table = {
   tickets: "trip_tickets",
   itinerary: "trip_itinerary",
   flights: "trip_flights",
+  accommodations: "trip_accommodations",
+  ticketPlans: "trip_ticket_plans",
   diningRestaurants: "dining_restaurants",
   diningRecords: "dining_records"
 };
@@ -24,6 +26,14 @@ const schema = {
   trip_flights: {
     table: "CREATE TABLE IF NOT EXISTS trip_flights (id TEXT NOT NULL, trip_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (trip_id, id))",
     index: "CREATE INDEX IF NOT EXISTS idx_trip_flights_trip ON trip_flights(trip_id, created_at)"
+  },
+  trip_accommodations: {
+    table: "CREATE TABLE IF NOT EXISTS trip_accommodations (id TEXT NOT NULL, trip_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (trip_id, id))",
+    index: "CREATE INDEX IF NOT EXISTS idx_trip_accommodations_trip ON trip_accommodations(trip_id, created_at)"
+  },
+  trip_ticket_plans: {
+    table: "CREATE TABLE IF NOT EXISTS trip_ticket_plans (id TEXT NOT NULL, trip_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (trip_id, id))",
+    index: "CREATE INDEX IF NOT EXISTS idx_trip_ticket_plans_trip ON trip_ticket_plans(trip_id, created_at)"
   }
 };
 
@@ -40,6 +50,8 @@ async function readSnapshot(db, tripId, collections) {
     tickets: [],
     itinerary: [],
     flights: [],
+    accommodations: [],
+    ticketPlans: [],
     diningRestaurants: [],
     diningRecords: [],
     updatedAt: new Date().toISOString()
