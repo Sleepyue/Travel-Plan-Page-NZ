@@ -313,18 +313,108 @@ function renderFocus() {
 /* 「完成 / 未完成」作用于轮播中当前可见的那张卡。
    完成（需求③d）：把该条目的时间更新为完成时刻 —— 例如 11:00 的午餐在 10:50 点完成，
    每日行程里的时间就改成 10:50；未完成不改时间。 */
+/* ---------- 行程日的编号与日期互推 ----------
+   DAY01 = 1，往前一天是 0（出发前），往后依次 12、13…（行程后补记）。
+   完成日期与计划日不同时，事项会被挪到「完成那天」对应的卡上。 */
+
+function localDateString(date) {
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function tripFirstDay() {
+  return (state.data?.days || [])[0] || null;
+}
+
+function dayNumberForDate(dateString) {
+  const first = tripFirstDay();
+  if (!first?.date) return null;
+  const base = Date.parse(`${first.date}T12:00:00`);
+  const target = Date.parse(`${String(dateString)}T12:00:00`);
+  if (!Number.isFinite(base) || !Number.isFinite(target)) return null;
+  return 1 + Math.round((target - base) / 86400000);
+}
+
+function tripDateForDayNumber(number) {
+  const first = tripFirstDay();
+  if (!first?.date) return "";
+  const base = new Date(`${first.date}T12:00:00`);
+  if (Number.isNaN(base.getTime())) return "";
+  base.setDate(base.getDate() + (Number(number) - 1));
+  return localDateString(base);
+}
+
+/* 基线里这条原始的计划时间 —— 「撤销完成」在没有 previousTime 时用它兜底。 */
+function authoredTimeFor(day, itemId) {
+  const source = (state.data?.days || []).find((entry) => entry.day === Number(day));
+  if (!source) return "";
+  let found = "";
+  (source.schedule || []).forEach((item, index) => {
+    if (authoredScheduleItemId(item, index) === String(itemId)) found = String(item.time || "");
+  });
+  return found;
+}
+
+/* 完成 / 撤销完成一条行程。提醒模块和每日行程的双按钮共用这一份。
+   完成：
+     · 时间改成「完成时刻」，记下完整完成时间戳与「完成前的时间 / 原来的天」；
+     · 若完成日期与计划日不同（比如 9/24 完成 9/25 的事项），把条目**挪到完成那天**的卡上：
+       原日留墓碑（基线条目）或直接删行（共享层新增的条目），新日写一条记录。
+   撤销：真正撤销这次操作 —— 还原原时间、挪回原来的天，并清掉完成信息。 */
+function applyCompletion(day, item, completed) {
+  const currentDay = Number(day);
+  const now = new Date();
+
+  if (completed) {
+    const clock = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const targetDay = dayNumberForDate(localDateString(now));
+    const patch = {
+      time: clock,
+      text: item.text,
+      type: item.type,
+      completed: true,
+      completedAt: now.toISOString(),
+      previousTime: String(item.time || ""),
+      previousDay: currentDay
+    };
+    if (targetDay === null || targetDay === currentDay) {
+      saveItineraryRecord(currentDay, item.itemId, patch);
+      return;
+    }
+    if (item.isAdded) removeItineraryEntry(currentDay, item.itemId, true);
+    else saveItineraryRecord(currentDay, item.itemId, {
+      time: item.time, text: item.text, type: item.type, completed: false, deleted: true
+    });
+    saveItineraryRecord(targetDay, item.itemId, patch);
+    return;
+  }
+
+  const backDay = Number.isSafeInteger(Number(item.previousDay)) ? Number(item.previousDay) : currentDay;
+  const restored = {
+    time: item.previousTime || authoredTimeFor(backDay, item.itemId) || item.time,
+    text: item.text,
+    type: item.type,
+    completed: false,
+    completedAt: "",
+    previousTime: "",
+    previousDay: ""
+  };
+  if (backDay === currentDay) {
+    saveItineraryRecord(currentDay, item.itemId, restored);
+    return;
+  }
+  if (item.isAdded) removeItineraryEntry(currentDay, item.itemId, true);
+  else saveItineraryRecord(currentDay, item.itemId, {
+    time: item.time, text: item.text, type: item.type, completed: false, deleted: true
+  });
+  saveItineraryRecord(backDay, item.itemId, restored);
+}
+
 function applyFocusCompletion(completed) {
   const triplet = reminderTriplet();
   const entry = triplet?.[visibleFocusRole()] || triplet?.current;
   if (!entry) return;
-  const now = new Date();
-  const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  saveItineraryRecord(entry.day.day, entry.item.itemId, {
-    time: completed ? time : entry.item.time,
-    text: entry.item.text,
-    type: entry.item.type,
-    completed
-  });
+  applyCompletion(entry.day.day, entry.item, completed);
   renderTimeline();
   renderFocus();
 }
@@ -934,7 +1024,9 @@ function itineraryRecordId(day, itemId) {
 function normalizeItineraryRecord(raw) {
   const day = Number(raw?.day);
   const itemId = String(raw?.itemId || "").trim();
-  if (!Number.isSafeInteger(day) || day < 1 || !itemId) return null;
+  /* day 不限于 1..11：完成日期落在行程外时，事项会被挪到「完成那天」对应的编号
+     （DAY01 = 1，往前是 0、-1…，往后是 12、13…），所以这里放宽到 ±400 天。 */
+  if (!Number.isSafeInteger(day) || day < -400 || day > 400 || !itemId) return null;
   return {
     id: itineraryRecordId(day, itemId),
     day,
@@ -943,6 +1035,16 @@ function normalizeItineraryRecord(raw) {
     text: String(raw?.text || "").trim().slice(0, 200),
     type: String(raw?.type || "note").trim().slice(0, 24),
     completed: Boolean(raw?.completed),
+    /* 完成的完整时间戳（本地 ISO）。time 只有 HH:MM，跨天时排不出正确先后，
+       所以排序用这个；老记录没有就回退到「当天 + 计划时间」。 */
+    completedAt: typeof raw?.completedAt === "string" ? raw.completedAt.trim().slice(0, 32) : "",
+    /* 完成前的时间。点「未完成」要真的撤销这次完成（还原原时间），
+       所以得把它记下来 —— 否则撤销完时间会停在完成时刻。 */
+    previousTime: typeof raw?.previousTime === "string" ? raw.previousTime.trim().slice(0, 16) : "",
+    /* 完成前它在哪一天。撤销时要挪回去，所以一并记下。 */
+    previousDay: Number.isSafeInteger(Number(raw?.previousDay)) && Number(raw?.previousDay) >= 0
+      ? Number(raw.previousDay)
+      : "",
     deleted: Boolean(raw?.deleted)
   };
 }
@@ -963,12 +1065,36 @@ function itineraryRecordMap() {
   return map;
 }
 
+/* 当天内条目的排序键（毫秒）—— 用的就是列表上显示的那个时间。
+   完成会把条目的时间改写成「完成时刻的 HH:MM」，所以重排后顺序和实际发生的先后一致
+   （11:00 的午餐 14:30 完成 → 时间变 14:30 → 挪到 13:12 之后）。
+   ⚠️ 不要拿「完整完成时间戳」来排：出发前提前打勾时完成日早于日程日，
+   那样会把条目甩到当天最前，而它显示的时间还是 14:30 —— 顺序和时间对不上。 */
+function scheduleSortKey(day, item) {
+  const clock = String(item.time || "").match(/(\d{1,2}):(\d{2})/);
+  const clockText = clock ? `${clock[1].padStart(2, "0")}:${clock[2]}` : "00:00";
+  const scheduled = new Date(`${day.date}T${clockText}:00${dayUtcOffset(day)}`).getTime();
+  return Number.isFinite(scheduled) ? scheduled : 0;
+}
+
 /* Merge the authored baseline with the shared overlay into the days the UI renders. */
 function itineraryDays() {
   const source = state.data?.days || [];
   if (!source.length) return [];
   const records = itineraryRecordMap();
-  return source.map((day) => {
+  /* 行程区间外的完成日期（出发前 / 行程后补记）会多出天数：按 DAY01=1 的编号推回日期，
+     给这些天补一张卡，否则挪过去的事项会凭空消失。 */
+  const known = new Set(source.map((day) => Number(day.day)));
+  const extras = [...new Set([...records.values()].map((record) => Number(record.day)))]
+    .filter((number) => Number.isSafeInteger(number) && number >= 0 && !known.has(number))
+    .sort((first, second) => first - second)
+    .map((number) => {
+      const date = tripDateForDayNumber(number);
+      return date ? { day: number, date, title: "", locations: [], synthetic: true, schedule: [] } : null;
+    })
+    .filter(Boolean);
+  const allDays = [...source, ...extras].sort((first, second) => Number(first.day) - Number(second.day));
+  return allDays.map((day) => {
     const items = [];
     const authoredIds = new Set();
     (day.schedule || []).forEach((item, index) => {
@@ -984,7 +1110,11 @@ function itineraryDays() {
         text: record ? record.text : String(item.text || ""),
         type: record ? record.type : String(item.type || "note"),
         completed: Boolean(record?.completed),
-        isAdded: false
+        completedAt: record?.completedAt || "",
+        previousTime: record?.previousTime || "",
+        previousDay: record?.previousDay ?? "",
+        isAdded: false,
+        moved: false
       });
     });
     const additions = [...records.values()]
@@ -996,10 +1126,13 @@ function itineraryDays() {
          showed up last and read as broken. */
       const time = String(record.time || "");
       const index = items.findIndex((existing) => String(existing.time || "").localeCompare(time) > 0);
-      const entry = { id: record.itemId, itemId: record.itemId, time, text: record.text, type: record.type, completed: record.completed, isAdded: true };
+      const entry = { id: record.itemId, itemId: record.itemId, time, text: record.text, type: record.type, completed: record.completed, completedAt: record.completedAt || "", previousTime: record.previousTime || "", previousDay: record.previousDay ?? "", isAdded: true, moved: Boolean(record.previousDay) };
       if (index < 0) items.push(entry);
       else items.splice(index, 0, entry);
     }
+    /* 最后统一按「完成时刻 / 计划时刻」排一遍：完成会把时间改写成完成时刻，
+       重排后列表顺序才和实际发生的先后一致。基线本来就是时间升序，所以正常情况下这是空操作。 */
+    items.sort((first, second) => scheduleSortKey(day, first) - scheduleSortKey(day, second));
     return { ...day, schedule: items };
   });
 }
@@ -1049,7 +1182,7 @@ function removeItineraryEntry(day, itemId, isAdded) {
 
 function scheduleEditorMarkup(day, item) {
   return `
-    <form class="schedule-editor" data-schedule-form="edit" data-schedule-day="${day.day}" data-schedule-completed="${item.completed ? "1" : "0"}">
+    <form class="schedule-editor" data-schedule-form="edit" data-schedule-day="${day.day}" data-schedule-completed="${item.completed ? "1" : "0"}" data-schedule-completed-at="${escapeHtml(item.completedAt || "")}" data-schedule-previous-time="${escapeHtml(item.previousTime || "")}" data-schedule-previous-day="${escapeHtml(String(item.previousDay ?? ""))}">
       <div class="schedule-editor__grid">
         <label><span>时间</span><input type="time" name="time" value="${escapeHtml(item.time || "")}" required></label>
         <label><span>类型</span>
@@ -1083,7 +1216,7 @@ function scheduleItemMarkup(day, item) {
     <li class="schedule-item${item.completed ? " is-done" : ""}${item.isAdded ? " is-added" : ""}" data-schedule-id="${escapeHtml(recordId)}" data-schedule-day="${day.day}" data-schedule-item="${escapeHtml(item.itemId)}">
       <span class="schedule-time">${timeLabel}</span>
       <div class="schedule-content">
-        <div class="schedule-text">${escapeHtml(item.text)}${typeLabel ? `<span class="schedule-type">${escapeHtml(typeLabel)}</span>` : ""}${item.isAdded ? `<span class="schedule-type schedule-type--added">新增</span>` : ""}</div>
+        <div class="schedule-text">${escapeHtml(item.text)}${typeLabel ? `<span class="schedule-type">${escapeHtml(typeLabel)}</span>` : ""}${item.isAdded && !item.moved ? `<span class="schedule-type schedule-type--added">新增</span>` : ""}</div>
         ${scheduleTickets}
         ${mapLinks ? `<div class="schedule-map-links">${mapLinks}</div>` : ""}
         <div class="schedule-actions">
@@ -1123,7 +1256,9 @@ function renderItineraryViewTabs(days) {
   const tabs = [["all", "总览", "全部行程"], ...days.map((day) => [
     String(day.day),
     dayTabLabel(day.date),
-    `DAY ${String(day.day).padStart(2, "0")} · ${formatCompactDate(day.date)}`
+    day.synthetic
+      ? `${formatCompactDate(day.date)} · ${Number(day.day) < 1 ? "出发前完成" : "行程后补记"}`
+      : `DAY ${String(day.day).padStart(2, "0")} · ${formatCompactDate(day.date)}`
   ])];
   container.innerHTML = tabs.map(([value, label, title]) =>
     `<button type="button" data-itinerary-view="${value}" aria-pressed="${view === value}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">${escapeHtml(label)}</button>`).join("");
@@ -1144,12 +1279,14 @@ function renderScheduleAddForm(days) {
   const typeSelect = $("#schedule-add-type");
   if (!daySelect || !typeSelect) return;
   const previous = daySelect.value;
-  if (daySelect.options.length !== days.length) {
-    daySelect.innerHTML = days.map((day) =>
+  /* 区间外的卡（出发前完成 / 行程后补记）不参与「新增行程」的日期选择。 */
+  const selectable = days.filter((day) => !day.synthetic);
+  if (daySelect.options.length !== selectable.length) {
+    daySelect.innerHTML = selectable.map((day) =>
       `<option value="${day.day}">DAY ${String(day.day).padStart(2, "0")} · ${escapeHtml(formatCompactDate(day.date))}</option>`).join("");
   }
-  const fallback = String(currentTripDay() || days[0]?.day || 1);
-  daySelect.value = days.some((day) => String(day.day) === previous) ? previous : fallback;
+  const fallback = String(currentTripDay() || selectable[0]?.day || 1);
+  daySelect.value = selectable.some((day) => String(day.day) === previous) ? previous : fallback;
   if (!typeSelect.options.length) {
     typeSelect.innerHTML = SCHEDULE_TYPES.map(([value, label]) => `<option value="${value}">${escapeHtml(label)}</option>`).join("");
   }
@@ -1171,14 +1308,20 @@ function dayCard(day) {
   const doneSummary = day.schedule.length
     ? `<span class="day-done-summary${doneCount === day.schedule.length ? " is-complete" : ""}">${doneCount}/${day.schedule.length} 已完成</span>`
     : "";
+  /* 行程区间外的卡（出发前完成 / 行程后补记）：没有 DAY 号也没有行程内容，按日期标注。 */
+  const outside = Boolean(day.synthetic);
+  const outsideLabel = Number(day.day) < 1 ? "出发前完成" : "行程后补记";
+  const metaLabel = outside
+    ? `${escapeHtml(formatCompactDate(day.date))} · ${outsideLabel}`
+    : `DAY ${String(day.day).padStart(2, "0")} · ${escapeHtml(formatCompactDate(day.date))}`;
   return `
-    <article class="day-card${isToday ? " is-today" : ""}" data-day="${day.day}">
+    <article class="day-card${isToday ? " is-today" : ""}${outside ? " is-outside" : ""}" data-day="${day.day}">
       <span class="day-dot" aria-hidden="true"></span>
       <button class="day-toggle" type="button" aria-expanded="${expanded}" aria-controls="day-detail-${day.day}">
         <span>
-          <span class="day-meta">DAY ${String(day.day).padStart(2, "0")} · ${escapeHtml(formatCompactDate(day.date))}${isToday ? " · 今天" : ""}</span>
-          <span class="day-title">${escapeHtml(day.title)}</span>
-          <span class="day-locations">${escapeHtml(day.locations.join(" → "))}</span>
+          <span class="day-meta">${metaLabel}${isToday ? " · 今天" : ""}</span>
+          <span class="day-title">${escapeHtml(day.title || (outside ? "行程区间外的记录" : ""))}</span>
+          <span class="day-locations">${escapeHtml((day.locations || []).join(" → "))}</span>
           <span class="day-badges">${ticketSummary}${doneSummary}</span>
         </span>
         <span class="day-chevron${expanded ? " is-expanded" : ""}" aria-hidden="true">${expanded ? "−" : "+"}</span>
@@ -1274,7 +1417,7 @@ function focusOpenScheduleEditor() {
 
 function renderTimeline() {
   const days = itineraryDays();
-  $("#day-count").textContent = `${days.length} DAYS`;
+  $("#day-count").textContent = `${days.filter((day) => !day.synthetic).length} DAYS`;
   renderItineraryViewTabs(days);
   renderScheduleAddForm(days);
   applyItineraryBlock();
@@ -1305,14 +1448,7 @@ function renderTimeline() {
       const entry = findItineraryEntry(day, itemId);
       if (!entry) return;
       const completed = stateButton.hasAttribute("data-schedule-done");
-      const now = new Date();
-      const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      saveItineraryRecord(day, itemId, {
-        time: completed ? time : entry.time,
-        text: entry.text,
-        type: entry.type,
-        completed
-      });
+      applyCompletion(day, entry, completed);
       renderTimeline();
       renderFocus();
       return;
@@ -1367,7 +1503,16 @@ function renderTimeline() {
     const text = read("text");
     if (!itemId || !Number.isSafeInteger(day) || !time || !text) return;
     state.editingScheduleId = null;
-    saveItineraryRecord(day, itemId, { time, text, type: read("type") || "note", completed: form.dataset.scheduleCompleted === "1" });
+    /* 编辑不该动完成时间戳，否则这条会从「按完成时刻排」掉回「按计划时刻排」。 */
+    saveItineraryRecord(day, itemId, {
+      time,
+      text,
+      type: read("type") || "note",
+      completed: form.dataset.scheduleCompleted === "1",
+      completedAt: form.dataset.scheduleCompletedAt || "",
+      previousTime: form.dataset.schedulePreviousTime || "",
+      previousDay: form.dataset.schedulePreviousDay === "" ? "" : Number(form.dataset.schedulePreviousDay)
+    });
     renderTimeline();
     renderFocus();
   };

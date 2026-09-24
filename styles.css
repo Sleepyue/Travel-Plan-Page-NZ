@@ -165,6 +165,10 @@ main { overflow-x: clip; }
 .day-card + .day-card { margin-top: 8px; }
 .day-dot { position: absolute; left: 12px; top: 25px; z-index: 1; width: 13px; height: 13px; border: 3px solid var(--paper); border-radius: 50%; background: #a5b1ae; box-shadow: 0 0 0 1px #a5b1ae; }
 .day-card.is-today .day-dot { background: var(--terracotta); box-shadow: 0 0 0 3px rgba(182,92,58,.18); }
+/* 行程区间外的卡（出发前完成 / 行程后补记）：淡一点，和正式行程日区分开。 */
+.day-card.is-outside .day-dot { background: #c2a37a; box-shadow: 0 0 0 1px #c2a37a; }
+.day-card.is-outside .day-meta { color: #a1794a; }
+.day-card.is-outside .day-title { color: var(--muted); }
 .day-toggle { width: 100%; min-height: 78px; padding: 15px 4px; border: 0; border-bottom: 1px solid var(--line); background: transparent; text-align: left; display: grid; grid-template-columns: 1fr auto; gap: 12px; cursor: pointer; }
 .day-meta { color: var(--lake); font: 750 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .05em; }
 .day-title { margin-top: 5px; font-size: 17px; font-weight: 740; line-height: 1.35; }
@@ -209,12 +213,22 @@ main { overflow-x: clip; }
 .schedule-item.is-done::after { border-color: var(--forest); background: var(--forest); }
 .schedule-item.is-done .schedule-text { color: #87928f; text-decoration: line-through; }
 .schedule-actions { margin-top: 9px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-/* 「未完成 / 已完成」双按钮（2026-09-24 改版，语义对齐行程提醒模块）：
-   已完成 = 实心强调；当前状态对应的那颗按钮 disabled，另一颗可点。 */
+/* 「未完成 / 已完成」双按钮：当前状态对应的那颗 disabled，另一颗可点。
+   配色上让「已完成」只在**真的完成**时才填色：
+   - 未完成：描边绿（表示「可点的动作」）
+   - 已完成：实心绿（表示「当前状态」）
+   否则列表里一屏实心绿按钮，会被看成「全都完成了」。 */
 .schedule-state-btn { font-weight: 720; }
 .schedule-state-btn:disabled { opacity: .5; cursor: not-allowed; }
-.schedule-state-btn--done:not(:disabled) { border-color: var(--forest); color: #fff; background: var(--forest); }
-.schedule-state-btn--done:not(:disabled):hover { border-color: #3f6347; background: #3f6347; }
+.schedule-state-btn--done:not(:disabled) { border-color: var(--forest); color: var(--forest); background: rgba(81, 107, 85, .08); }
+.schedule-state-btn--done:not(:disabled):hover { border-color: #3f6347; color: #3f6347; background: rgba(81, 107, 85, .16); }
+/* 真正完成的那一条：填成实心绿 + 恢复不透明，作为状态标识 */
+.schedule-item.is-done .schedule-state-btn--done {
+  border-color: var(--forest);
+  color: #fff;
+  background: var(--forest);
+  opacity: 1;
+}
 .schedule-action { min-height: 34px; padding: 0 11px; border: 1px solid #cfdbd8; border-radius: 999px; background: rgba(255,255,255,.75); color: #3d5257; cursor: pointer; font-size: 11px; font-weight: 700; }
 .schedule-action:hover { border-color: var(--lake); color: var(--lake); }
 .schedule-action--danger { color: #9a7062; }
