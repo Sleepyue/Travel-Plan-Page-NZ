@@ -1577,6 +1577,7 @@
           <section class="ledger-setting-group">
             <div class="ledger-setting-heading">
               <div><h3>消费类型</h3><p>「记一笔」时可选；可新增、改名、排序、删除</p></div>
+              <button class="ledger-text-button" type="button" data-ledger-action="focus-category-add">新增类型</button>
             </div>
             <div class="ledger-category-list" data-ledger-category-list>
               ${categoryList().map((category, index, all) => renderCategoryRow(category, index, all.length)).join("")}
@@ -2227,6 +2228,13 @@
       updateCurrencyDialog("base");
     } else if (action === "pick-common-currency") {
       updateCurrencyDialog("common");
+    } else if (action === "focus-category-add") {
+      /* 对齐「常用外币 → 添加货币」的入口设计：标题旁直接给一个「新增类型」，
+         点击后把新增表单滚到弹窗中间并聚焦输入框，省得用户在长列表里找。 */
+      const form = ledgerRoot.querySelector('form[data-ledger-form="category-add"]');
+      const input = form?.querySelector('input[name="name"]');
+      form?.scrollIntoView({ block: "center", behavior: "smooth" });
+      input?.focus({ preventScroll: true });
     } else if (action === "choose-bill-currency") {
       chooseBillCurrency(button);
     } else if (action === "choose-currency") {
