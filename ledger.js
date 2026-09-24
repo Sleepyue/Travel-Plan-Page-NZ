@@ -931,6 +931,44 @@
       </section>`;
   }
 
+  /* 账单分类（第十轮）：按消费类型把账单分组列出来 —— 「这一类到底花在哪了」。
+     与「消费明细」分工：这里看每一笔，消费明细看汇总与占比。 */
+  function renderBillsByCategoryPage() {
+    const baseCurrency = ledgerData.settings.baseCurrency;
+    const totalCents = ledgerData.bills.reduce((sum, bill) => sum + bill.baseAmountCents, 0);
+    const groups = categoryOrder().map((category) => ({
+      category,
+      bills: ledgerData.bills
+        .filter((bill) => bill.category === category)
+        .sort((first, second) => String(second.orderedAt || second.createdAt).localeCompare(String(first.orderedAt || first.createdAt)))
+    })).filter((group) => group.bills.length);
+    return `
+      <section class="ledger-tab-panel" data-ledger-panel="categories" role="tabpanel" aria-labelledby="ledger-categories-tab" ${activeTab === "categories" ? "" : "hidden"}>
+        <section class="ledger-stats-overview" aria-labelledby="ledger-categories-title">
+          <p class="ledger-section-kicker">账单分类</p>
+          <h2 id="ledger-categories-title">${escapeHtml(formatMoney(totalCents, baseCurrency))}</h2>
+          <span>${ledgerData.bills.length} 笔账单 · ${groups.length} 个消费类型</span>
+        </section>
+
+        ${groups.length ? groups.map((group) => {
+          const subtotal = group.bills.reduce((sum, bill) => sum + bill.baseAmountCents, 0);
+          const share = totalCents ? (subtotal / totalCents) * 100 : 0;
+          const id = `ledger-category-${encodeURIComponent(group.category)}`;
+          return `
+            <section class="ledger-settlement-section" aria-labelledby="${escapeAttribute(id)}">
+              <div class="ledger-section-heading">
+                <div>
+                  <p class="ledger-section-kicker">消费类型</p>
+                  <h2 id="${escapeAttribute(id)}">${escapeHtml(group.category)}</h2>
+                </div>
+                <span class="ledger-soft-count">${group.bills.length} 笔 · ${escapeHtml(formatMoney(subtotal, baseCurrency))} · ${share.toFixed(1)}%</span>
+              </div>
+              <div class="ledger-bill-list ledger-category-bill-list">${group.bills.map(renderBillRow).join("")}</div>
+            </section>`;
+        }).join("") : `<div class="ledger-empty-state"><p>添加账单后，这里会按消费类型分组列出每一笔。</p></div>`}
+      </section>`;
+  }
+
   function renderRelatedBills(member) {
     if (!member.billIds.length) return `<p class="ledger-member-empty">暂无相关账单</p>`;
     return member.billIds.map((billId) => {
@@ -1284,6 +1322,32 @@
             </div>` : `<div class="ledger-empty-state"><p>添加账单后，这里会显示各类型的占比。</p></div>`}
         </section>
 
+        <section class="ledger-settlement-section" aria-labelledby="ledger-category-summary-title">
+          <div class="ledger-section-heading">
+            <div>
+              <p class="ledger-section-kicker">消费类型</p>
+              <h2 id="ledger-category-summary-title">按消费类型汇总</h2>
+            </div>
+            <span class="ledger-soft-count">${slices.length} 类</span>
+          </div>
+          ${hasBills ? `
+            <div class="ledger-transfer-list ledger-category-summary">
+              ${order.map((category) => {
+                const entry = breakdown.categories.get(category);
+                if (!entry?.totalCents) return "";
+                const share = totalCents ? (entry.totalCents / totalCents) * 100 : 0;
+                return `
+                  <div class="ledger-category-summary-row" data-category-summary="${escapeAttribute(category)}">
+                    <span class="ledger-detail-legend__dot" style="--ledger-detail-color:${escapeAttribute(categoryColor(category))}"></span>
+                    <span class="ledger-category-summary__label">${escapeHtml(category)}</span>
+                    <span class="ledger-category-summary__count">${entry.billCount} 笔</span>
+                    <span class="ledger-category-summary__share">${share.toFixed(1)}%</span>
+                    <strong class="ledger-transfer-amount">${escapeHtml(formatMoney(entry.totalCents, baseCurrency))}</strong>
+                  </div>`;
+              }).join("")}
+            </div>` : `<div class="ledger-empty-state"><p>添加账单后，这里会按消费类型汇总笔数、金额与占比。</p></div>`}
+        </section>
+
         <section class="ledger-settlement-section" aria-labelledby="ledger-member-chart-title">
           <div class="ledger-section-heading">
             <div>
@@ -1480,12 +1544,14 @@
         <nav class="ledger-tabs" role="tablist" aria-label="记账页面">
           <button id="ledger-entry-tab" class="ledger-tab ${activeTab === "entry" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "entry"}" data-ledger-action="set-tab" data-ledger-tab="entry">记账</button>
           <button id="ledger-bills-tab" class="ledger-tab ${activeTab === "bills" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "bills"}" data-ledger-action="set-tab" data-ledger-tab="bills">账单明细</button>
+          <button id="ledger-categories-tab" class="ledger-tab ${activeTab === "categories" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "categories"}" data-ledger-action="set-tab" data-ledger-tab="categories">账单分类</button>
           <button id="ledger-stats-tab" class="ledger-tab ${activeTab === "stats" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "stats"}" data-ledger-action="set-tab" data-ledger-tab="stats">账单结算</button>
           <button id="ledger-detail-tab" class="ledger-tab ${activeTab === "detail" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "detail"}" data-ledger-action="set-tab" data-ledger-tab="detail">消费明细</button>
         </nav>
         <div class="ledger-live" role="status" aria-live="polite">${escapeHtml(notice)}</div>
         ${renderEntryPage()}
         ${renderBillsPage()}
+        ${renderBillsByCategoryPage()}
         ${renderStatsPage()}
         ${renderDetailPage()}
         ${renderMembersDialog()}
@@ -2143,7 +2209,7 @@
     requestAnimationFrame(() => ledgerRoot.querySelector(`[data-ledger-tab="${nextTab}"]`)?.focus());
   }
 
-  const LEDGER_TABS = Object.freeze(["entry", "bills", "stats", "detail"]);
+  const LEDGER_TABS = Object.freeze(["entry", "bills", "categories", "stats", "detail"]);
 
   function tabForHash(hash) {
     const match = String(hash || "").match(/^#ledger-([a-z]+)$/);

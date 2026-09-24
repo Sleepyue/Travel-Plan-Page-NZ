@@ -456,6 +456,25 @@
             : `<div class="ledger-empty-state"><p>${filterIsAll() ? "导入或手动添加餐厅后，会显示在这里。" : "换个筛选条件看看，或者先给餐厅打上标记。"}</p></div>`}
         </section>
 
+        <section class="ledger-entry-card" aria-labelledby="dining-import-title">
+          <div class="ledger-section-heading">
+            <div>
+              <p class="ledger-section-kicker">预备清单</p>
+              <h2 id="dining-import-title">导入餐厅清单</h2>
+            </div>
+            <button class="ledger-text-button" type="button" data-dining-action="import-from-trip">从行程导入用餐点</button>
+          </div>
+          <form class="ledger-bill-form" data-dining-form="import" novalidate>
+            <label class="ledger-field">
+              <span class="ledger-field-label">每行一条 <small>城市, 店名, 餐饮类型, 人均, 备注</small></span>
+              <textarea class="ledger-input dining-textarea" name="bulk" rows="4" placeholder="皇后镇, Fergburger, 快餐, NZ$18, 网红汉堡&#10;奥克兰, Depot, 新西兰本地, NZ$40"></textarea>
+            </label>
+            <p class="ledger-form-error" data-dining-form-error role="alert"></p>
+            <button class="ledger-primary-button" type="submit">导入清单</button>
+          </form>
+          <p class="dining-hint">也支持粘贴 JSON 数组，例如 <code>[{"city":"皇后镇","name":"Fergburger","cuisine":"快餐"}]</code>。</p>
+        </section>
+
         <section class="ledger-entry-card" aria-labelledby="dining-add-restaurant-title">
           <div class="ledger-section-heading">
             <div>
@@ -495,24 +514,6 @@
           </form>
         </section>
 
-        <section class="ledger-entry-card" aria-labelledby="dining-import-title">
-          <div class="ledger-section-heading">
-            <div>
-              <p class="ledger-section-kicker">预备清单</p>
-              <h2 id="dining-import-title">导入餐厅清单</h2>
-            </div>
-            <button class="ledger-text-button" type="button" data-dining-action="import-from-trip">从行程导入用餐点</button>
-          </div>
-          <form class="ledger-bill-form" data-dining-form="import" novalidate>
-            <label class="ledger-field">
-              <span class="ledger-field-label">每行一条 <small>城市, 店名, 餐饮类型, 人均, 备注</small></span>
-              <textarea class="ledger-input dining-textarea" name="bulk" rows="4" placeholder="皇后镇, Fergburger, 快餐, NZ$18, 网红汉堡&#10;奥克兰, Depot, 新西兰本地, NZ$40"></textarea>
-            </label>
-            <p class="ledger-form-error" data-dining-form-error role="alert"></p>
-            <button class="ledger-primary-button" type="submit">导入清单</button>
-          </form>
-          <p class="dining-hint">也支持粘贴 JSON 数组，例如 <code>[{"city":"皇后镇","name":"Fergburger","cuisine":"快餐"}]</code>。</p>
-        </section>
       </section>`;
   }
 

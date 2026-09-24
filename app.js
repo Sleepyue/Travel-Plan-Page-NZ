@@ -92,7 +92,7 @@ function applyModuleConfig() {
   const hashModules = {
     "#flights": "flights", "#route": "overview", "#itinerary": "itinerary",
     "#drive": "driving", "#prep": "todo", "#ledger": "ledger",
-    "#ledger-bills": "ledger", "#ledger-stats": "ledger", "#ledger-detail": "ledger"
+    "#ledger-bills": "ledger", "#ledger-categories": "ledger", "#ledger-stats": "ledger", "#ledger-detail": "ledger"
   };
   const requestedModule = hashModules[location.hash];
   if (requestedModule && !moduleEnabled(requestedModule)) {

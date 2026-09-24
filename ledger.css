@@ -131,15 +131,21 @@ body[data-active-view="ledger"] .topbar { background: rgba(250, 251, 249, .93); 
 .ledger-text-button:hover, .ledger-icon-button:hover { background: #edf5f4; }
 .ledger-text-button:active, .ledger-icon-button:active, .ledger-primary-button:active, .ledger-secondary-button:active { transform: translateY(1px); }
 .ledger-danger-button { color: #aa5d4d; }
-/* 页签下滑后吸附在顶栏下方（2026-09-24 第七轮）。背景要不透明，否则列表会从下面透出来。 */
+/* 页签下滑后吸附在顶栏下方（第七轮）。背景要不透明，否则列表会从下面透出来。
+   第十轮加到 5 个页签后，窄屏会被挤得每个标签内部换行 —— 改成单行横向滚动，
+   和「每日行程 / 行前准备」的吸附栏保持一致。 */
 .ledger-tabs {
-  display: flex; gap: 26px; margin-top: 26px; border-bottom: 1px solid rgba(19,38,47,.1);
+  display: flex; gap: 24px; margin-top: 26px; border-bottom: 1px solid rgba(19,38,47,.1);
   position: sticky;
   top: calc(48px + var(--safe-top));
   z-index: 14;
   background: #fafbf9;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
 }
-.ledger-tab { position: relative; min-height: 50px; padding: 0; border: 0; color: #899598; background: transparent; cursor: pointer; font-size: 14px; font-weight: 740; }
+.ledger-tabs::-webkit-scrollbar { display: none; }
+.ledger-tab { position: relative; flex: 0 0 auto; min-height: 50px; padding: 0; border: 0; color: #899598; background: transparent; cursor: pointer; font-size: 14px; font-weight: 740; white-space: nowrap; }
 .ledger-tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: transparent; }
 .ledger-tab.ledger-is-active { color: var(--ink); }
 .ledger-tab.ledger-is-active::after { background: var(--lake); }
@@ -427,6 +433,22 @@ body[data-active-view="ledger"] .topbar { background: rgba(250, 251, 249, .93); 
 .ledger-detail-legend { flex: 1 1 240px; min-width: 0; margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
 .ledger-detail-legend__row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto; align-items: center; gap: 9px; font-size: 12px; }
 .ledger-detail-legend__dot { width: 10px; height: 10px; border-radius: 3px; background: var(--ledger-detail-color, #8a9798); }
+
+/* 「按消费类型汇总」表（第十轮）：类型 · 笔数 · 占比 · 金额。 */
+.ledger-category-summary-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(19, 38, 47, .1);
+}
+.ledger-category-summary-row:first-child { border-top: 0; }
+.ledger-category-summary__label { min-width: 0; overflow: hidden; font-size: 13px; font-weight: 740; text-overflow: ellipsis; white-space: nowrap; }
+.ledger-category-summary__count { color: #95a0a1; font-size: 11px; white-space: nowrap; }
+.ledger-category-summary__share { color: var(--lake); font-size: 11px; font-weight: 720; white-space: nowrap; }
+.ledger-category-summary-row .ledger-transfer-amount { color: var(--ink); font-size: 15px; }
 .ledger-detail-legend__label { color: #33474e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ledger-detail-legend__share { color: #8a9798; font-size: 11px; font-variant-numeric: tabular-nums; }
 .ledger-detail-legend__value { color: #172d34; font-size: 12px; font-variant-numeric: tabular-nums; }
