@@ -404,9 +404,16 @@ main { overflow-x: clip; }
 .drive-note-panel li + li { border-top: 1px solid var(--line); }
 .drive-note-panel li::before { content: ""; position: absolute; left: 0; top: 20px; width: 4px; height: 4px; border-radius: 50%; background: #8ca5a7; }
 
-.todo-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+/* 新增待办：内容 + 类型 + 添加 三列；窄屏折成两行（内容独占一行）。 */
+.todo-form { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
 .todo-form input { min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.8); font: inherit; font-size: 13px; outline: none; }
 .todo-form input:focus { border-color: var(--lake); box-shadow: 0 0 0 3px rgba(40,123,144,.1); }
+.todo-form select { min-width: 0; min-height: 48px; padding: 0 10px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.8); color: var(--ink); cursor: pointer; font: inherit; font-size: 12px; outline: none; }
+.todo-form select:focus { border-color: var(--lake); box-shadow: 0 0 0 3px rgba(40,123,144,.1); }
+@media (max-width: 420px) {
+  .todo-form { grid-template-columns: minmax(0, 1fr) auto; }
+  .todo-form input { grid-column: 1 / -1; }
+}
 .todo-form button { min-width: 64px; min-height: 48px; border: 0; border-radius: 13px; color: white; background: var(--ink); cursor: pointer; font-size: 12px; font-weight: 750; }
 .todo-list { margin-top: 13px; }
 .todo-group { margin-top: 20px; }
@@ -826,18 +833,34 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 }
 
 /* 总览 + DAY01-DAY11 单天查看按键（需求②b） */
-/* 每日行程下的两个模块：新增行程 / 行程列表。
-   第六轮拆成两个小模块，第七轮再改成「同一页只显示一个 + 上方切换键」。 */
-.itinerary-subnav { margin: 2px 0 0; display: flex; gap: 8px; }
+/* 每日行程的两个导航条（模块切换 + 按天查看）合并进一个吸附容器，
+   下滑后一起固定在顶栏下方；样式对齐餐饮/记账的页签条（文字 + 选中下划线）。 */
+.itinerary-nav-dock {
+  position: sticky;
+  top: calc(48px + var(--safe-top));
+  z-index: 15;
+  margin: 2px -18px 18px;
+  padding: 0 18px;
+  background: rgba(243, 246, 242, .95);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+}
+.itinerary-subnav { display: flex; gap: 22px; }
 .itinerary-subnav button {
-  flex: 1 1 0; min-height: 46px; border: 1px solid var(--line); border-radius: 12px;
-  color: var(--muted); background: rgba(255,255,255,.8); cursor: pointer;
-  font-size: 13px; font-weight: 760;
-  transition: border-color .15s ease, color .15s ease, background .15s ease;
+  position: relative; flex: 0 0 auto; min-height: 48px; padding: 0; border: 0;
+  color: #899598; background: transparent; cursor: pointer;
+  font-size: 14px; font-weight: 740; white-space: nowrap;
+  transition: color .15s ease;
+}
+.itinerary-subnav button::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px;
+  border-radius: 3px 3px 0 0; background: transparent;
 }
 .itinerary-subnav button:hover { color: var(--ink); }
-.itinerary-subnav button[aria-pressed="true"] { border-color: var(--ink); color: #fff; background: var(--ink); }
-.itinerary-block { margin-top: 22px; }
+.itinerary-subnav button[aria-pressed="true"] { color: var(--ink); }
+.itinerary-subnav button[aria-pressed="true"]::after { background: var(--lake); }
+.itinerary-block { margin-top: 0; }
 .itinerary-block__heading { margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .itinerary-block__kicker { margin: 0; color: var(--lake); font: 750 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .12em; }
 .itinerary-block__heading h3 { margin: 4px 0 0; font-size: 19px; font-weight: 780; letter-spacing: -.02em; }
@@ -846,23 +869,18 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
    横向滚动而不是换行 —— 12 个按键换行会有三四行，吸顶后会把可视区吃掉一大块。
    注意 sticky 的祖先链上不能有 overflow: hidden/auto/scroll（main 用的是 overflow-x: clip）。 */
 .itinerary-view-tabs {
-  position: sticky;
-  top: calc(48px + var(--safe-top));
-  z-index: 14;
-  margin: 0 -18px 16px;
-  padding: 10px 18px;
   display: flex;
   gap: 6px;
   flex-wrap: nowrap;
+  margin: 0;
+  padding: 0 0 10px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  background: rgba(243, 246, 242, .95);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--line);
 }
 .itinerary-view-tabs::-webkit-scrollbar { display: none; }
+/* display:flex 会盖掉 UA 的 [hidden]{display:none}，所以必须显式写一条 */
+.itinerary-view-tabs[hidden] { display: none; }
 .itinerary-view-tabs button { flex: 0 0 auto; min-height: 40px; padding: 0 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.8); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 720; transition: border-color .15s ease, color .15s ease, background .15s ease; }
 .itinerary-view-tabs button:hover { color: var(--ink); }
 .itinerary-view-tabs button[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
@@ -944,17 +962,21 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 
 /* ===== 时间模块（第八轮）：新西兰 / 中国的实时日期与时间 =====
    卡片与倒计时盒子直接沿用行程提醒的视觉语言（同一套 --ink 渐变 + 半透明小格）。 */
-.clock-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 560px) { .clock-grid { grid-template-columns: 1fr; } }
-.clock-card { padding: 18px; border-radius: var(--radius-lg); color: #eef7f8; background: linear-gradient(135deg, #1b3741, #287b90); box-shadow: var(--shadow); }
-.clock-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.clock-card__label { font-size: 14px; font-weight: 780; letter-spacing: .01em; }
-.clock-card__hint { color: #9fd0d8; font-size: 10px; }
-.clock-card__date { margin-top: 6px; color: #bfe0e6; font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
-.clock-card__time { margin-top: 12px; display: flex; gap: 8px; }
-.clock-unit { display: flex; flex-direction: column; align-items: center; min-width: 56px; flex: 1 1 0; padding: 10px 6px; border-radius: 14px; background: rgba(255,255,255,.1); }
-.clock-unit b { font: 760 30px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
-.clock-unit i { margin-top: 6px; font-style: normal; font-size: 11px; color: #bfe0e6; }
+/* 一张卡，里面左右两个分区（新西兰 | 中国）。字号按「一屏能放下 6 个时间格」来定：
+   卡片内宽约 318px（390 视口），每格约 48px，所以数字取 clamp(17px, 5.2vw, 22px)。 */
+.clock-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+.clock-card { padding: 16px 18px; border-radius: var(--radius-lg); color: #eef7f8; background: linear-gradient(135deg, #1b3741, #287b90); box-shadow: var(--shadow); }
+.clock-card__zones { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.clock-zone { min-width: 0; }
+.clock-zone + .clock-zone { padding-left: 12px; border-left: 1px solid rgba(255,255,255,.18); }
+.clock-zone__head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.clock-zone__label { font-size: 13px; font-weight: 780; letter-spacing: .01em; }
+.clock-zone__hint { min-width: 0; overflow: hidden; color: #9fd0d8; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.clock-zone__date { margin-top: 4px; color: #bfe0e6; font: 600 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.clock-zone__time { margin-top: 10px; display: flex; gap: 5px; }
+.clock-unit { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1 1 0; padding: 7px 2px; border-radius: 11px; background: rgba(255,255,255,.1); }
+.clock-unit b { font: 760 clamp(17px, 5.2vw, 22px)/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.clock-unit i { margin-top: 4px; font-style: normal; font-size: 10px; color: #bfe0e6; }
 
 /* ===== 行前准备：分类批量设置责任人（需求 2）===== */
 .todo-group__tools { display: flex; align-items: center; gap: 8px; }

@@ -1237,6 +1237,9 @@ function applyItineraryBlock() {
   const listBlock = $("#itinerary-list-block");
   if (addBlock) addBlock.hidden = block !== "add";
   if (listBlock) listBlock.hidden = block !== "list";
+  /* 「按天查看」只在行程列表下出现 */
+  const viewTabs = $("#itinerary-view-tabs");
+  if (viewTabs) viewTabs.hidden = block !== "list";
   $$("#itinerary-subnav button").forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.itineraryBlock === block));
   });
@@ -1943,11 +1946,26 @@ function renderTodoOwners() {
     </button>`).join("");
 }
 
+/* 新增事项的类型下拉：选项只在缺失时重建，其余情况保留用户已选的值。
+   （默认值 = 当前正在筛选的类型，在「日用类」里加就直接归到日用类。） */
+function renderTodoCategorySelect() {
+  const select = $("#todo-category");
+  if (!select) return;
+  const previous = select.value;
+  if (select.options.length !== TODO_CATEGORY_ORDER.length) {
+    select.innerHTML = TODO_CATEGORY_ORDER
+      .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`).join("");
+  }
+  const fallback = TODO_CATEGORY_ORDER.includes(state.todoFilter) ? state.todoFilter : "其他";
+  select.value = TODO_CATEGORY_ORDER.includes(previous) ? previous : fallback;
+}
+
 function renderTodoList() {
   const view = state.todoOwnerView || "all";
   const completed = state.todos.filter(todoCompleted).length;
   $("#todo-progress").textContent = `${completed} / ${state.todos.length}`;
   renderTodoOwners();
+  renderTodoCategorySelect();
   if (!state.todos.length) {
     $("#todo-list").innerHTML = `<p class="todo-empty">还没有准备事项，添加第一项吧。</p>`;
     return;
@@ -1960,11 +1978,13 @@ function renderTodoList() {
     if (!groups.has(cat)) groups.set(cat, []);
     groups.get(cat).push(todo);
   }
+  /* TODO_CATEGORY_ORDER 末尾本来就含「其他」，所以这里只需补它没列到的自定义分类。
+     ⚠️ 早先多写了一句「if (groups.has("其他")) orderedCats.push("其他")」，
+     导致「其他」这一组被渲染两遍 —— 只要有条目归到「其他」，它就会在页面上出现两次。 */
   const orderedCats = TODO_CATEGORY_ORDER.filter((cat) => groups.has(cat));
   for (const cat of groups.keys()) {
-    if (!orderedCats.includes(cat) && cat !== "其他") orderedCats.push(cat);
+    if (!orderedCats.includes(cat)) orderedCats.push(cat);
   }
-  if (groups.has("其他")) orderedCats.push("其他");
   const filter = state.todoFilter || "all";
   const visibleCats = filter === "all" ? orderedCats : orderedCats.filter((cat) => cat === filter);
   const html = visibleCats.map((cat) => {
@@ -2000,11 +2020,12 @@ function renderTodoFilters() {
     const cat = todo.category || "其他";
     groups.set(cat, (groups.get(cat) || 0) + 1);
   }
+  /* 同 renderTodoList：TODO_CATEGORY_ORDER 末尾已含「其他」，不要再补一次，
+     否则筛选栏会出现两个「其他」按钮。 */
   const ordered = TODO_CATEGORY_ORDER.filter((cat) => groups.has(cat));
   for (const cat of groups.keys()) {
-    if (!ordered.includes(cat) && cat !== "其他") ordered.push(cat);
+    if (!ordered.includes(cat)) ordered.push(cat);
   }
-  if (groups.has("其他")) ordered.push("其他");
   const stripPrefix = (label) => label.replace(/^\d+\.\s*/, "");
   const buttons = [`<button type="button" data-todo-filter="all" aria-pressed="${state.todoFilter === "all"}">总览</button>`]
     .concat(ordered.map((cat) => `<button type="button" data-todo-filter="${escapeHtml(cat)}" aria-pressed="${state.todoFilter === cat}">${escapeHtml(stripPrefix(cat))}</button>`));
@@ -2014,6 +2035,9 @@ function renderTodoFilters() {
     if (!button) return;
     state.todoFilter = button.dataset.todoFilter;
     $$("button", container).forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    /* 切到具体类型时，新增下拉也跟着切过去（renderTodoCategorySelect 会保留这个值）。 */
+    const categorySelect = $("#todo-category");
+    if (categorySelect && TODO_CATEGORY_ORDER.includes(state.todoFilter)) categorySelect.value = state.todoFilter;
     renderTodoList();
   };
 }
@@ -2065,7 +2089,9 @@ function renderTravelPrep() {
     if (!text) return;
     /* 新增项默认归当前正在看的那个责任人，省一次切换。 */
     const owner = state.todoOwnerView === "p2" ? "p2" : "p1";
-    state.todos.push({ id: `todo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, category: "其他", completed: false, owner });
+    const requested = $("#todo-category")?.value || "";
+    const category = TODO_CATEGORY_ORDER.includes(requested) ? requested : "其他";
+    state.todos.push({ id: `todo-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, category, completed: false, owner });
     input.value = "";
     saveSharedChange("todos", state.todos.at(-1)).catch(console.error);
     renderTodoList();
@@ -2673,9 +2699,10 @@ function clockParts(zone, date = new Date()) {
     const time = new Intl.DateTimeFormat("zh-CN", {
       timeZone: zone, hourCycle: "h23", hour: "2-digit", minute: "2-digit", second: "2-digit"
     }).formatToParts(date);
-    const day = new Intl.DateTimeFormat("zh-CN", {
-      timeZone: zone, month: "long", day: "numeric", weekday: "short"
-    }).format(date);
+    /* 分开取再拼，避免 zh-CN 把「9月25日周五」挤成一坨 */
+    const monthDay = new Intl.DateTimeFormat("zh-CN", { timeZone: zone, month: "long", day: "numeric" }).format(date);
+    const weekday = new Intl.DateTimeFormat("zh-CN", { timeZone: zone, weekday: "short" }).format(date);
+    const day = `${monthDay} ${weekday}`;
     const pick = (type) => time.find((part) => part.type === type)?.value || "00";
     return { hour: pick("hour"), minute: pick("minute"), second: pick("second"), day };
   } catch (error) {
@@ -2687,18 +2714,24 @@ function clockParts(zone, date = new Date()) {
 function renderClocks() {
   const grid = $("#clock-grid");
   if (!grid) return;
-  grid.innerHTML = CLOCKS.map((clock) => `
-    <article class="clock-card" data-clock="${escapeHtml(clock.id)}">
-      <div class="clock-card__head">
-        <span class="clock-card__label">${escapeHtml(clock.label)}</span>
-        <span class="clock-card__hint">${escapeHtml(clock.hint)}</span>
+  /* 一张卡里左右两个分区（新西兰 / 中国），不再上下各一张卡。 */
+  grid.innerHTML = `
+    <article class="clock-card">
+      <div class="clock-card__zones">
+        ${CLOCKS.map((clock) => `
+          <section class="clock-zone" data-clock="${escapeHtml(clock.id)}">
+            <div class="clock-zone__head">
+              <span class="clock-zone__label">${escapeHtml(clock.label)}</span>
+              <span class="clock-zone__hint">${escapeHtml(clock.hint)}</span>
+            </div>
+            <div class="clock-zone__date" data-clock-date="${escapeHtml(clock.id)}"></div>
+            <div class="clock-zone__time">
+              ${[["hour", "时"], ["minute", "分"], ["second", "秒"]].map(([unit, label]) => `
+                <span class="clock-unit"><b data-clock-${unit}="${escapeHtml(clock.id)}">--</b><i>${label}</i></span>`).join("")}
+            </div>
+          </section>`).join("")}
       </div>
-      <div class="clock-card__date" data-clock-date="${escapeHtml(clock.id)}"></div>
-      <div class="clock-card__time">
-        ${[["hour", "时"], ["minute", "分"], ["second", "秒"]].map(([unit, label]) => `
-          <span class="clock-unit"><b data-clock-${unit}="${escapeHtml(clock.id)}">--</b><i>${label}</i></span>`).join("")}
-      </div>
-    </article>`).join("");
+    </article>`;
   updateClocks();
 }
 
