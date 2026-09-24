@@ -2,12 +2,15 @@
   "use strict";
 
   const STORAGE_VERSION = 1;
+  /* 消费类型（分类）出厂默认值。用户可以自己增删改名排序，实际列表存在 settings.categories，
+     这里只是首次使用的种子 —— 和「常用币种」同一套思路。 */
+  const DEFAULT_CATEGORIES = Object.freeze(["餐饮", "交通", "住宿", "门票", "购物", "其他"]);
   const DEFAULT_SETTINGS = Object.freeze({
     baseCurrency: "CNY",
     commonCurrencies: ["EUR", "CHF", "HKD"],
-    lastCurrency: "CNY"
+    lastCurrency: "CNY",
+    categories: [...DEFAULT_CATEGORIES]
   });
-  const CATEGORIES = Object.freeze(["餐饮", "交通", "住宿", "门票", "购物", "其他"]);
   const AVATAR_COLORS = Object.freeze([
     "#D96C42", "#217D91", "#5C8E62", "#8B6AA8", "#C58B32",
     "#4F72A2", "#B85F76", "#4E8F86", "#9A6B4F", "#68798E"
@@ -148,6 +151,8 @@
   let editingBillId = null;
   let openDialogName = null;
   let currencyPickerMode = "common";
+  /* 正在改名的那条消费类型（空串 = 没有在改名） */
+  let renamingCategory = "";
   let currencyQuery = "";
   let notice = "";
   let billDraft = null;
@@ -279,6 +284,11 @@
     const availableCurrencies = new Set([baseCurrency, ...commonCurrencies]);
     const requestedLast = String(raw.settings?.lastCurrency || baseCurrency).toUpperCase();
     const lastCurrency = availableCurrencies.has(requestedLast) ? requestedLast : baseCurrency;
+    const categories = [...new Set(
+      (Array.isArray(raw.settings?.categories) ? raw.settings.categories : DEFAULT_CATEGORIES)
+        .map((name) => String(name || "").trim().slice(0, 12))
+        .filter(Boolean)
+    )];
     const bills = (Array.isArray(raw.bills) ? raw.bills : []).flatMap((bill) => {
       const originalAmountCents = Number(bill?.originalAmountCents);
       const baseAmountCents = Number(bill?.baseAmountCents);
@@ -289,7 +299,8 @@
       if (!Number.isSafeInteger(originalAmountCents) || originalAmountCents <= 0) return [];
       if (!Number.isSafeInteger(baseAmountCents) || baseAmountCents <= 0) return [];
       if (!CURRENCY_BY_CODE.has(currency) || !travelerIds.has(payerId) || !participantIds.length) return [];
-      const category = CATEGORIES.includes(bill?.category) ? bill.category : "其他";
+      /* 不再把「不在内置列表里」的分类改写成其他 —— 用户自己加的分类要能存住。 */
+      const category = String(bill?.category || "").trim().slice(0, 12) || "其他";
       return [{
         id: String(bill.id || makeId("bill")),
         originalAmountCents,
@@ -306,11 +317,28 @@
     });
     return {
       version: STORAGE_VERSION,
-      settings: { baseCurrency, commonCurrencies, lastCurrency },
+      settings: {
+        baseCurrency,
+        commonCurrencies,
+        lastCurrency,
+        categories: categories.length ? categories : [...DEFAULT_CATEGORIES]
+      },
       travelers,
       bills,
       updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : fallback.updatedAt
     };
+  }
+
+  /* 用户设置的消费类型；账单里出现过的分类永远保留在选项里，
+     否则改名或删除之后，历史账单会变成「选不中」的孤儿分类。 */
+  function categoryList() {
+    const stored = ledgerData?.settings?.categories;
+    return Array.isArray(stored) && stored.length ? stored : [...DEFAULT_CATEGORIES];
+  }
+
+  function categoryOptions() {
+    const used = (ledgerData?.bills || []).map((bill) => bill.category).filter(Boolean);
+    return [...new Set([...categoryList(), ...used])];
   }
 
   function createLocalStorageAdapter(tripId, options = {}) {
@@ -686,7 +714,7 @@
             <fieldset class="ledger-fieldset">
               <legend class="ledger-field-label">分类</legend>
               <div class="ledger-category-grid">
-                ${CATEGORIES.map((category) => `
+                ${categoryOptions().map((category) => `
                   <label class="ledger-category-choice">
                     <input class="ledger-category-input" type="radio" name="category" value="${escapeAttribute(category)}" ${category === selectedCategory ? "checked" : ""}>
                     <span>${escapeHtml(category)}</span>
@@ -1060,16 +1088,27 @@
     "门票": "#c58b32", "购物": "#8b6aa8", "其他": "#8a9798"
   });
 
+  /* 自定义分类没有预置颜色，按名字稳定散列到调色板 —— 同一个分类每次都是同一个颜色。 */
+  const CATEGORY_PALETTE = Object.freeze([
+    "#b65c3a", "#287b90", "#516b55", "#c58b32", "#8b6aa8",
+    "#4f72a2", "#b85f76", "#4e8f86", "#9a6b4f", "#68798e"
+  ]);
+
   function categoryColor(category) {
-    return CATEGORY_COLORS[category] || "#68798e";
+    if (CATEGORY_COLORS[category]) return CATEGORY_COLORS[category];
+    const name = String(category || "");
+    let hash = 0;
+    for (let index = 0; index < name.length; index += 1) hash = (hash * 31 + name.charCodeAt(index)) % 100000;
+    return CATEGORY_PALETTE[hash % CATEGORY_PALETTE.length];
   }
 
   /* 餐饮/交通/… keep their canonical order; a category typed by hand trails after. */
   function categoryOrder() {
     const present = new Set(ledgerData.bills.map((bill) => bill.category));
+    const list = categoryList();
     return [
-      ...CATEGORIES.filter((category) => present.has(category)),
-      ...[...present].filter((category) => !CATEGORIES.includes(category))
+      ...list.filter((category) => present.has(category)),
+      ...[...present].filter((category) => !list.includes(category))
     ];
   }
 
@@ -1440,6 +1479,68 @@
       </span>`;
   }
 
+  /* 消费类型管理的一行：颜色点 + 名称 + 改名 / 上移 / 下移 / 删除。
+     参照「常用币种」的做法，但因为要带上/下移，改成竖排一行一条，触控目标更实在。 */
+  function renderCategoryRow(category, index, total) {
+    if (renamingCategory === category) {
+      return `
+        <form class="ledger-category-row ledger-category-row--editing" data-ledger-form="category-rename" data-ledger-category="${escapeAttribute(category)}">
+          <input class="ledger-input" name="name" maxlength="12" value="${escapeAttribute(category)}" aria-label="新的消费类型名称" required>
+          <button class="ledger-text-button" type="submit">保存</button>
+          <button class="ledger-text-button" type="button" data-ledger-action="cancel-category-rename">取消</button>
+        </form>`;
+    }
+    return `
+      <div class="ledger-category-row" data-ledger-category="${escapeAttribute(category)}">
+        <span class="ledger-detail-legend__dot" style="--ledger-detail-color:${escapeAttribute(categoryColor(category))}"></span>
+        <span class="ledger-category-row__name">${escapeHtml(category)}</span>
+        <button type="button" data-ledger-action="start-category-rename" data-ledger-category="${escapeAttribute(category)}" aria-label="重命名 ${escapeAttribute(category)}">✎</button>
+        <button type="button" data-ledger-action="move-category" data-ledger-category="${escapeAttribute(category)}" data-ledger-direction="-1" aria-label="上移 ${escapeAttribute(category)}" ${index === 0 ? "disabled" : ""}>↑</button>
+        <button type="button" data-ledger-action="move-category" data-ledger-category="${escapeAttribute(category)}" data-ledger-direction="1" aria-label="下移 ${escapeAttribute(category)}" ${index === total - 1 ? "disabled" : ""}>↓</button>
+        <button type="button" class="ledger-category-row__remove" data-ledger-action="remove-category" data-ledger-category="${escapeAttribute(category)}" aria-label="删除 ${escapeAttribute(category)}">×</button>
+      </div>`;
+  }
+
+  /* 分类改名时同步改掉历史账单上的分类，否则旧名字会以「孤儿分类」的形式留在图表里。 */
+  async function renameCategory(from, to) {
+    const name = String(to || "").trim().slice(0, 12);
+    if (!name || name === from) { renamingCategory = ""; renderApp(); return; }
+    if (categoryList().includes(name)) { setNotice(`「${name}」已经存在。`); renderApp(); return; }
+    openDialogName = "settings";
+    renamingCategory = "";
+    await mutateData((next) => {
+      next.settings.categories = next.settings.categories.map((item) => (item === from ? name : item));
+      next.bills.forEach((bill) => { if (bill.category === from) bill.category = name; });
+    }, { reason: "category-renamed", message: `「${from}」已改名为「${name}」` });
+  }
+
+  async function removeCategory(category) {
+    if (categoryList().length <= 1) { setNotice("至少要保留一个消费类型。"); return; }
+    openDialogName = "settings";
+    await mutateData((next) => {
+      next.settings.categories = next.settings.categories.filter((item) => item !== category);
+    }, { reason: "category-removed", message: `「${category}」已从选择列表移除` });
+  }
+
+  async function moveCategory(category, direction) {
+    const list = [...categoryList()];
+    const index = list.indexOf(category);
+    const target = index + Number(direction);
+    if (index < 0 || target < 0 || target >= list.length) return;
+    [list[index], list[target]] = [list[target], list[index]];
+    openDialogName = "settings";
+    await mutateData((next) => { next.settings.categories = list; }, { reason: "category-moved", message: "" });
+  }
+
+  async function addCategory(name) {
+    const value = String(name || "").trim().slice(0, 12);
+    if (!value) return;
+    if (categoryList().includes(value)) { setNotice(`「${value}」已经存在。`); return; }
+    openDialogName = "settings";
+    await mutateData((next) => { next.settings.categories = [...next.settings.categories, value]; },
+      { reason: "category-added", message: `已添加消费类型「${value}」` });
+  }
+
   function renderSettingsDialog() {
     const baseCurrency = currencyByCode(ledgerData.settings.baseCurrency);
     const baseLocked = ledgerData.bills.length > 0;
@@ -1448,7 +1549,7 @@
         <div class="ledger-dialog-header">
           <div>
             <p class="ledger-section-kicker">记账设置</p>
-            <h2 id="ledger-settings-dialog-title">货币</h2>
+            <h2 id="ledger-settings-dialog-title">货币与分类</h2>
           </div>
           <button class="ledger-dialog-close" type="button" data-ledger-action="close-dialog" aria-label="关闭">×</button>
         </div>
@@ -1472,6 +1573,19 @@
             ${ledgerData.settings.commonCurrencies.length
               ? `<div class="ledger-currency-chips">${ledgerData.settings.commonCurrencies.map(renderCurrencyChip).join("")}</div>`
               : `<p class="ledger-dialog-empty">尚未添加常用外币。</p>`}
+          </section>
+          <section class="ledger-setting-group">
+            <div class="ledger-setting-heading">
+              <div><h3>消费类型</h3><p>「记一笔」时可选；可新增、改名、排序、删除</p></div>
+            </div>
+            <div class="ledger-category-list" data-ledger-category-list>
+              ${categoryList().map((category, index, all) => renderCategoryRow(category, index, all.length)).join("")}
+            </div>
+            <form class="ledger-category-add" data-ledger-form="category-add">
+              <input class="ledger-input" name="name" maxlength="12" placeholder="新增消费类型，例如：零食" aria-label="新的消费类型" required>
+              <button class="ledger-secondary-button" type="submit">添加</button>
+            </form>
+            <p class="ledger-setting-note">删除只影响选择列表，已记的账单仍保留原分类。</p>
           </section>
         </div>
       </dialog>`;
@@ -1792,7 +1906,7 @@
       form.elements.baseAmount?.focus();
       return;
     }
-    if (!CATEGORIES.includes(category)) {
+    if (!category) {
       setFormError(form, "请选择账单分类。");
       return;
     }
@@ -2117,6 +2231,19 @@
       chooseBillCurrency(button);
     } else if (action === "choose-currency") {
       chooseCurrency(button.dataset.ledgerCode || "");
+    } else if (action === "start-category-rename") {
+      renamingCategory = button.dataset.ledgerCategory || "";
+      openDialogName = "settings";
+      renderApp();
+      requestAnimationFrame(() => ledgerRoot.querySelector('[data-ledger-form="category-rename"] input[name="name"]')?.select());
+    } else if (action === "cancel-category-rename") {
+      renamingCategory = "";
+      openDialogName = "settings";
+      renderApp();
+    } else if (action === "remove-category") {
+      void removeCategory(button.dataset.ledgerCategory || "");
+    } else if (action === "move-category") {
+      void moveCategory(button.dataset.ledgerCategory || "", button.dataset.ledgerDirection);
     } else if (action === "remove-common-currency") {
       removeCommonCurrency(button.dataset.ledgerCode || "");
     } else if (action === "delete-member") {
@@ -2189,6 +2316,14 @@
     }
     if (editingNoteBillId && !(await flushActiveBillNote())) return;
     if (form.dataset.ledgerForm === "bill") await submitBill(form);
+    if (form.dataset.ledgerForm === "category-add") {
+      await addCategory(new FormData(form).get("name"));
+      return;
+    }
+    if (form.dataset.ledgerForm === "category-rename") {
+      await renameCategory(form.dataset.ledgerCategory || "", new FormData(form).get("name"));
+      return;
+    }
     if (form.dataset.ledgerForm === "member-add") await submitMemberAdd(form);
     if (form.dataset.ledgerForm === "member-edit") await submitMemberEdit(form);
   }

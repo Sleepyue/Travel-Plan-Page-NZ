@@ -449,6 +449,33 @@ body[data-active-view="ledger"] .topbar { background: rgba(250, 251, 249, .93); 
 .ledger-category-summary__count { color: #95a0a1; font-size: 11px; white-space: nowrap; }
 .ledger-category-summary__share { color: var(--lake); font-size: 11px; font-weight: 720; white-space: nowrap; }
 .ledger-category-summary-row .ledger-transfer-amount { color: var(--ink); font-size: 15px; }
+
+/* 消费类型管理（设置弹窗内，第十一轮）：参照「常用币种」的设计语言，
+   但因为要带上移/下移/改名/删除，改成竖排一行一条，触控目标更实在。 */
+.ledger-category-list { display: grid; gap: 8px; margin-top: 12px; }
+.ledger-category-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 48px;
+  padding: 6px 10px;
+  border: 1px solid rgba(19, 38, 47, .12);
+  border-radius: 12px;
+  background: #fff;
+}
+.ledger-category-row--editing { grid-template-columns: minmax(0, 1fr) auto auto; }
+.ledger-category-row__name { min-width: 0; overflow: hidden; font-size: 13px; font-weight: 720; text-overflow: ellipsis; white-space: nowrap; }
+.ledger-category-row button {
+  width: 34px; height: 34px; padding: 0; border: 0; border-radius: 9px;
+  color: #5c6b6e; background: transparent; cursor: pointer; font-size: 13px; line-height: 1;
+}
+.ledger-category-row button:hover:not(:disabled) { color: var(--ink); background: #eef3f1; }
+.ledger-category-row button:disabled { opacity: .3; cursor: not-allowed; }
+.ledger-category-row .ledger-category-row__remove { color: #9a7062; }
+.ledger-category-row--editing .ledger-text-button { width: auto; padding: 0 10px; }
+.ledger-category-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-top: 12px; }
+.ledger-category-add .ledger-secondary-button { min-height: 46px; padding: 0 16px; }
 .ledger-detail-legend__label { color: #33474e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ledger-detail-legend__share { color: #8a9798; font-size: 11px; font-variant-numeric: tabular-nums; }
 .ledger-detail-legend__value { color: #172d34; font-size: 12px; font-variant-numeric: tabular-nums; }
