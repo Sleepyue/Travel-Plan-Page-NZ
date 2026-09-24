@@ -287,11 +287,17 @@ body[data-active-view="ledger"] .topbar { background: rgba(250, 251, 249, .93); 
 .ledger-member-empty { color: #95a1a2; font-size: 10px; }
 
 .ledger-dialog { width: min(calc(100% - 28px), 560px); max-height: min(86dvh, 760px); margin: auto; padding: 0; overflow: hidden; border: 1px solid rgba(19,38,47,.1); border-radius: 20px; color: var(--ink); background: #fff; box-shadow: 0 22px 70px rgba(19,38,47,.2); }
+/* 长内容必须能在「弹窗体」里滚动：弹窗纵向 flex，头部固定、body 占满剩余高度并滚动。
+   否则 body 会长到内容高、自身无可滚动区域，超出 max-height 的部分被 .ledger-dialog
+   的 overflow:hidden 直接裁掉 —— 底部的「新增消费类型」输入框和按钮就永远够不到。
+   ⚠️ 必须带 [open] 限定：直接写 .ledger-dialog{display:flex} 会盖掉 UA 的
+   dialog:not([open]){display:none}，弹窗关闭后仍会显示。 */
+.ledger-dialog[open] { display: flex; flex-direction: column; }
 .ledger-dialog::backdrop { background: rgba(19,38,47,.28); backdrop-filter: blur(3px); }
-.ledger-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 22px 20px 15px; border-bottom: 1px solid rgba(19,38,47,.08); }
+.ledger-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 22px 20px 15px; border-bottom: 1px solid rgba(19,38,47,.08); flex: 0 0 auto; }
 .ledger-dialog-header h2 { margin-top: 5px; font-size: 21px; letter-spacing: -.035em; }
 .ledger-dialog-close { width: 38px; height: 38px; flex: 0 0 38px; border: 0; border-radius: 50%; color: #617174; background: #f1f5f3; cursor: pointer; font-size: 23px; line-height: 1; }
-.ledger-dialog-body { padding: 16px 20px 21px; overflow: auto; }
+.ledger-dialog-body { padding: 16px 20px 21px; overflow: auto; flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; }
 .ledger-dialog-empty { padding: 13px 0; color: #8d9a9b; font-size: 12px; }
 .ledger-member-edit-list { display: grid; gap: 9px; }
 .ledger-member-edit-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) 36px auto auto; align-items: center; gap: 8px; }
