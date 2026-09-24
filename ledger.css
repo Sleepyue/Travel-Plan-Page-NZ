@@ -131,7 +131,14 @@ body[data-active-view="ledger"] .topbar { background: rgba(250, 251, 249, .93); 
 .ledger-text-button:hover, .ledger-icon-button:hover { background: #edf5f4; }
 .ledger-text-button:active, .ledger-icon-button:active, .ledger-primary-button:active, .ledger-secondary-button:active { transform: translateY(1px); }
 .ledger-danger-button { color: #aa5d4d; }
-.ledger-tabs { display: flex; gap: 26px; margin-top: 26px; border-bottom: 1px solid rgba(19,38,47,.1); }
+/* 页签下滑后吸附在顶栏下方（2026-09-24 第七轮）。背景要不透明，否则列表会从下面透出来。 */
+.ledger-tabs {
+  display: flex; gap: 26px; margin-top: 26px; border-bottom: 1px solid rgba(19,38,47,.1);
+  position: sticky;
+  top: calc(48px + var(--safe-top));
+  z-index: 14;
+  background: #fafbf9;
+}
 .ledger-tab { position: relative; min-height: 50px; padding: 0; border: 0; color: #899598; background: transparent; cursor: pointer; font-size: 14px; font-weight: 740; }
 .ledger-tab::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: transparent; }
 .ledger-tab.ledger-is-active { color: var(--ink); }

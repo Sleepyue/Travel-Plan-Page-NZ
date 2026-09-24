@@ -6,6 +6,8 @@ const state = {
      itineraryView 为 "all"（总览）或具体天号（单天查看按键）。 */
   collapsedDays: new Set(),
   itineraryView: "all",
+  /* 每日行程内部的两个模块：list（行程列表，默认）/ add（新增行程），同一时刻只显示一个。 */
+  itineraryBlock: "list",
   editingScheduleId: null,
   countdownTimer: null,
   purchasedTickets: new Set(),
@@ -179,15 +181,20 @@ function reminderTriplet() {
   items.sort((first, second) => first.target - second.target);
   const pending = items.filter((entry) => !entry.item.completed);
   if (!pending.length) return null;
-  /* 最近一件：优先取未来第一件；全部过期时取最后一件（旧行为一致）。 */
-  const current = pending.find((entry) => entry.target.getTime() > now) || pending[pending.length - 1];
+  /* 最近一件 = 未完成事项里排在最前面的那一件，**不管它的计划时间有没有过**。
+     旧实现优先挑「时间还没到」的第一件，会把已经过期的第一件跳过去 ——
+     用户看到的就不是真正的下一件待办了。 */
+  const current = pending[0];
   const currentIndex = items.indexOf(current);
   const prev = [...items.slice(0, currentIndex)].reverse().find((entry) => entry.item.completed) || null;
   return {
     prev,
     current,
     next: items[currentIndex + 1] || null,
-    remaining: pending.filter((entry) => entry.target.getTime() > now).length
+    /* 「还剩 N 项」= 所有未完成事项（含已过期那件），否则数字会和卡片自相矛盾。 */
+    remaining: pending.length,
+    /* 未完成事项的时间全部过去了，才算整段行程结束。 */
+    finished: !pending.some((entry) => entry.target.getTime() > now)
   };
 }
 
@@ -287,7 +294,7 @@ function renderFocus() {
   const remaining = $("#focus-remaining");
   if (remaining) remaining.textContent = `还剩 ${triplet.remaining} 项`;
   state.focusTarget = triplet.current?.target || null;
-  state.focusFinished = !(triplet.current?.target.getTime() > Date.now());
+  state.focusFinished = Boolean(triplet.finished);
   updateFocusCountdown();
 
   /* 按钮作用于「当前可见的那张卡」：完成 / 未完成按该条目的状态各自禁用。 */
@@ -1089,6 +1096,19 @@ function scheduleItemMarkup(day, item) {
     </li>`;
 }
 
+/* 每日行程内部的两个模块切换（第七轮）：同一页只显示一个，
+   上方 #itinerary-subnav 的两颗按键切换。用 hidden 控制，不重新渲染整个视图。 */
+function applyItineraryBlock() {
+  const block = state.itineraryBlock === "add" ? "add" : "list";
+  const addBlock = $("#itinerary-add-block");
+  const listBlock = $("#itinerary-list-block");
+  if (addBlock) addBlock.hidden = block !== "add";
+  if (listBlock) listBlock.hidden = block !== "list";
+  $$("#itinerary-subnav button").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.itineraryBlock === block));
+  });
+}
+
 /* 单天按键的标签用「9.25」这种 月.日（2026-09-24 第六轮）—— 比 DAY 01 一眼就知道是哪天。 */
 function dayTabLabel(dateString) {
   const match = String(dateString || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -1257,6 +1277,14 @@ function renderTimeline() {
   $("#day-count").textContent = `${days.length} DAYS`;
   renderItineraryViewTabs(days);
   renderScheduleAddForm(days);
+  applyItineraryBlock();
+  const subnav = $("#itinerary-subnav");
+  if (subnav) subnav.onclick = (event) => {
+    const button = event.target.closest("[data-itinerary-block]");
+    if (!button) return;
+    state.itineraryBlock = button.dataset.itineraryBlock;
+    applyItineraryBlock();
+  };
   const visible = state.itineraryView === "all" ? days : days.filter((day) => day.day === state.itineraryView);
   $("#timeline").innerHTML = visible.map(dayCard).join("");
   $("#timeline").onclick = (event) => {
@@ -1359,6 +1387,8 @@ function renderTimeline() {
     renderScheduleAddForm(days);
     state.itineraryView = day;
     state.collapsedDays.delete(day);
+    /* 新增完自动切回「行程列表」并定位到那一天，否则用户加完还停在表单上看不到结果。 */
+    state.itineraryBlock = "list";
     renderTimeline();
     renderFocus();
   };

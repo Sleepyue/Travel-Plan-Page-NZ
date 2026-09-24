@@ -41,6 +41,18 @@ body[data-active-view="dining"] .topbar { background: rgba(250, 251, 249, .93); 
   background: var(--lake);
 }
 
+/* 餐饮页签 + 城市筛选一起下滑吸附在顶栏下方（2026-09-24 第七轮）。
+   两条都放在同一个 sticky 容器里，省得算第二条的 top 偏移。
+   容器内部 .ledger-tabs 改回 static，避免 sticky 套 sticky。 */
+.dining-nav-dock {
+  position: sticky;
+  top: calc(48px + var(--safe-top));
+  z-index: 14;
+  background: #fafbf9;
+}
+.dining-nav-dock .ledger-tabs { position: static; background: transparent; }
+.dining-nav-dock .dining-city-nav { margin-top: 8px; margin-bottom: 0; }
+
 /* City filter navigation bar, pinned to the top of the module. */
 .dining-city-nav {
   display: flex;

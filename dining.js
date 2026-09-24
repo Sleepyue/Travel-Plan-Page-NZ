@@ -724,12 +724,14 @@
             <button class="ledger-icon-button" type="button" data-dining-action="export" aria-label="导出餐饮数据">导出</button>
           </div>
         </header>
-        <nav class="ledger-tabs" role="tablist" aria-label="餐饮页面">
-          <button id="dining-restaurants-tab" class="ledger-tab ${activeTab === "restaurants" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "restaurants"}" data-dining-action="set-tab" data-dining-tab="restaurants">餐厅明细</button>
-          <button id="dining-record-tab" class="ledger-tab ${activeTab === "record" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "record"}" data-dining-action="set-tab" data-dining-tab="record">饮食记录</button>
-          <button id="dining-breakdown-tab" class="ledger-tab ${activeTab === "breakdown" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "breakdown"}" data-dining-action="set-tab" data-dining-tab="breakdown">饮食明细</button>
-        </nav>
-        ${renderCityNav()}
+        <div class="dining-nav-dock">
+          <nav class="ledger-tabs" role="tablist" aria-label="餐饮页面">
+            <button id="dining-restaurants-tab" class="ledger-tab ${activeTab === "restaurants" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "restaurants"}" data-dining-action="set-tab" data-dining-tab="restaurants">餐厅明细</button>
+            <button id="dining-record-tab" class="ledger-tab ${activeTab === "record" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "record"}" data-dining-action="set-tab" data-dining-tab="record">饮食记录</button>
+            <button id="dining-breakdown-tab" class="ledger-tab ${activeTab === "breakdown" ? "ledger-is-active" : ""}" type="button" role="tab" aria-selected="${activeTab === "breakdown"}" data-dining-action="set-tab" data-dining-tab="breakdown">饮食明细</button>
+          </nav>
+          ${renderCityNav()}
+        </div>
         <div class="ledger-live" role="status" aria-live="polite">${escapeHtml(notice)}</div>
         <datalist id="dining-city-list">${cityOptions().map((city) => `<option value="${escapeAttribute(city)}"></option>`).join("")}</datalist>
         <datalist id="dining-cuisine-list">${cuisineOptions().map((cuisine) => `<option value="${escapeAttribute(cuisine)}"></option>`).join("")}</datalist>
