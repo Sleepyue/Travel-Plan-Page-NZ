@@ -2660,17 +2660,74 @@ function renderWeather() {
     </div>`).join("");
 }
 
+/* ---------- 时间：新西兰 / 中国的实时日期与时间（第八轮） ----------
+   两个时区都交给 Intl + IANA 名字处理，夏令时切换不用自己算。
+   位置在「行程提醒」与「航班行程」之间，样式对齐提醒卡的倒计时。 */
+const CLOCKS = Object.freeze([
+  { id: "nz", label: "新西兰", zone: "Pacific/Auckland", hint: "奥克兰 · 皇后镇" },
+  { id: "cn", label: "中国", zone: "Asia/Shanghai", hint: "北京 · 深圳 · 香港" }
+]);
+
+function clockParts(zone, date = new Date()) {
+  try {
+    const time = new Intl.DateTimeFormat("zh-CN", {
+      timeZone: zone, hourCycle: "h23", hour: "2-digit", minute: "2-digit", second: "2-digit"
+    }).formatToParts(date);
+    const day = new Intl.DateTimeFormat("zh-CN", {
+      timeZone: zone, month: "long", day: "numeric", weekday: "short"
+    }).format(date);
+    const pick = (type) => time.find((part) => part.type === type)?.value || "00";
+    return { hour: pick("hour"), minute: pick("minute"), second: pick("second"), day };
+  } catch (error) {
+    console.warn("时间模块无法解析时区", zone, error);
+    return null;
+  }
+}
+
+function renderClocks() {
+  const grid = $("#clock-grid");
+  if (!grid) return;
+  grid.innerHTML = CLOCKS.map((clock) => `
+    <article class="clock-card" data-clock="${escapeHtml(clock.id)}">
+      <div class="clock-card__head">
+        <span class="clock-card__label">${escapeHtml(clock.label)}</span>
+        <span class="clock-card__hint">${escapeHtml(clock.hint)}</span>
+      </div>
+      <div class="clock-card__date" data-clock-date="${escapeHtml(clock.id)}"></div>
+      <div class="clock-card__time">
+        ${[["hour", "时"], ["minute", "分"], ["second", "秒"]].map(([unit, label]) => `
+          <span class="clock-unit"><b data-clock-${unit}="${escapeHtml(clock.id)}">--</b><i>${label}</i></span>`).join("")}
+      </div>
+    </article>`).join("");
+  updateClocks();
+}
+
+function updateClocks() {
+  CLOCKS.forEach((clock) => {
+    const parts = clockParts(clock.zone);
+    if (!parts) return;
+    const set = (selector, value) => {
+      const node = document.querySelector(selector);
+      if (node && node.textContent !== value) node.textContent = value;
+    };
+    set(`[data-clock-hour="${clock.id}"]`, parts.hour);
+    set(`[data-clock-minute="${clock.id}"]`, parts.minute);
+    set(`[data-clock-second="${clock.id}"]`, parts.second);
+    set(`[data-clock-date="${clock.id}"]`, parts.day);
+  });
+}
+
 function startCountdowns() {
   if (moduleEnabled("flights")) updateFlightCountdowns();
   if (moduleEnabled("driving")) updateRentalCountdown();
   if (state.focusTarget) updateFocusCountdown();
-  if (moduleEnabled("flights") || moduleEnabled("driving") || state.focusTarget) {
-    state.countdownTimer = window.setInterval(() => {
-      if (moduleEnabled("flights")) updateFlightCountdowns();
-      if (moduleEnabled("driving")) updateRentalCountdown();
-      if (state.focusTarget) updateFocusCountdown();
-    }, 1000);
-  }
+  updateClocks();
+  state.countdownTimer = window.setInterval(() => {
+    if (moduleEnabled("flights")) updateFlightCountdowns();
+    if (moduleEnabled("driving")) updateRentalCountdown();
+    if (state.focusTarget) updateFocusCountdown();
+    updateClocks();
+  }, 1000);
 }
 
 function preloadDefaultRouteMap() {
@@ -2721,6 +2778,7 @@ async function init() {
     if (state.data.weather?.length) renderWeather();
     renderStay();
     renderTickets();
+    renderClocks();
     if (moduleEnabled("driving")) renderRental();
     if (moduleEnabled("todo")) renderTravelPrep();
     renderFocus();

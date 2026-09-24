@@ -942,6 +942,20 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
 .ticketplan-card__edit { min-height: 38px; padding: 0 14px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; color: #e6f2f4; background: rgba(255,255,255,.08); cursor: pointer; font-size: 12px; font-weight: 740; }
 .ticketplan-card__edit:hover { border-color: #8fc6d0; background: rgba(255,255,255,.16); }
 
+/* ===== 时间模块（第八轮）：新西兰 / 中国的实时日期与时间 =====
+   卡片与倒计时盒子直接沿用行程提醒的视觉语言（同一套 --ink 渐变 + 半透明小格）。 */
+.clock-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .clock-grid { grid-template-columns: 1fr; } }
+.clock-card { padding: 18px; border-radius: var(--radius-lg); color: #eef7f8; background: linear-gradient(135deg, #1b3741, #287b90); box-shadow: var(--shadow); }
+.clock-card__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.clock-card__label { font-size: 14px; font-weight: 780; letter-spacing: .01em; }
+.clock-card__hint { color: #9fd0d8; font-size: 10px; }
+.clock-card__date { margin-top: 6px; color: #bfe0e6; font: 600 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.clock-card__time { margin-top: 12px; display: flex; gap: 8px; }
+.clock-unit { display: flex; flex-direction: column; align-items: center; min-width: 56px; flex: 1 1 0; padding: 10px 6px; border-radius: 14px; background: rgba(255,255,255,.1); }
+.clock-unit b { font: 760 30px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.clock-unit i { margin-top: 6px; font-style: normal; font-size: 11px; color: #bfe0e6; }
+
 /* ===== 行前准备：分类批量设置责任人（需求 2）===== */
 .todo-group__tools { display: flex; align-items: center; gap: 8px; }
 .todo-group-owner select { max-width: 132px; min-height: 32px; padding: 0 6px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.9); color: var(--muted); font: inherit; font-size: 11px; cursor: pointer; }
@@ -955,4 +969,13 @@ button:focus-visible,a:focus-visible {outline:2px solid var(--lake);outline-offs
   .topbar .primary-navigation__prep { padding-inline: 5px; font-size: 11px; }
   .topbar .primary-navigation__itinerary[aria-current="page"]::after { left: 5px; right: 5px; }
   .topbar nav a { padding: 0 3px; }
+}
+
+/* ===== 手机上禁止「聚焦表单控件时自动放大」（第八轮） =====
+   iOS Safari 在聚焦 font-size < 16px 的 input/select/textarea 时会自动把页面放大，
+   而且失焦后不会缩回去，得手动双指缩回 —— 用户反馈的正是这个。
+   把可聚焦控件统一提到 16px 即可从根上避免（不禁用用户自己的双指缩放，比
+   viewport 写 maximum-scale=1 更安全）。!important 是为了压过各模块里 13px/14px 的具体规则。 */
+@media (max-width: 768px) {
+  input, select, textarea { font-size: 16px !important; }
 }
