@@ -425,6 +425,9 @@
         collections: ["settings", "travelers", "bills"]
       });
     }
+    /* 下面这条是**兜底实现**，只有 runtime-storage.js 没加载时才会走到（index.html 里它先于
+       ledger.js 加载，所以实际上到不了）。注意它只处理 bills / travelers ——
+       **不包含 settings**，因此不具备跨设备同步能力。真正的共享逻辑在 runtime-storage.js。 */
     let previous = null;
     const collections = ["bills", "travelers"];
     const rawApiBase = String(options.apiBase || "/api/trip").trim();

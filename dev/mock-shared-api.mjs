@@ -37,8 +37,11 @@ const TABLES = {
   accommodations: "trip_accommodations",
   ticketPlans: "trip_ticket_plans",
   diningRestaurants: "dining_restaurants",
-  diningRecords: "dining_records"
+  diningRecords: "dining_records",
+  settings: "trip_settings"
 };
+/* settings 是单例（库里一行，id 固定），回传对象而非数组 —— 与线上 Function 一致 */
+const SETTINGS_ID = "settings";
 const RECORD_TABLES = Object.values(TABLES);
 
 const contentTypes = {
@@ -83,7 +86,11 @@ function snapshotFor(tripId, collections) {
     settings: null,
     updatedAt: new Date().toISOString()
   };
-  for (const collection of collections) snapshot[collection] = [...rows(TABLES[collection], tripId).values()];
+  for (const collection of collections) {
+    const values = [...rows(TABLES[collection], tripId).values()];
+    /* settings 单例：回传对象（无则 null），其余集合回传数组 */
+    snapshot[collection] = collection === "settings" ? (values[0] ?? null) : values;
+  }
   return snapshot;
 }
 
@@ -111,7 +118,8 @@ async function handleApi(request, response, url) {
 
   for (const change of body.changes) {
     const table = TABLES[change.collection];
-    const id = String(change.id || "").trim().slice(0, 160);
+    /* settings 单例：id 由服务端固定，与线上 Function 行为一致 */
+    const id = String(change.collection === "settings" ? SETTINGS_ID : change.id || "").trim().slice(0, 160);
     if (!table || !collections.includes(change.collection) || !id || !["upsert", "delete"].includes(change.op)) {
       return sendJson(response, { error: "invalid change", change }, 400);
     }

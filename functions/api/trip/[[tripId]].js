@@ -13,8 +13,14 @@ const table = {
   accommodations: "trip_accommodations",
   ticketPlans: "trip_ticket_plans",
   diningRestaurants: "dining_restaurants",
-  diningRecords: "dining_records"
+  diningRecords: "dining_records",
+  settings: "trip_settings"
 };
+
+/* settings（记账本位币 / 常用外币 / 消费类型）是**单例**：库里只存一行，id 固定。
+   它走的是同一套记录协议（upsert/delete + 自愈建表），但**回传形状是对象而不是数组**，
+   与本地快照的 `snapshot.settings` 保持一致。 */
+const SETTINGS_ID = "settings";
 
 // 自愈建表：客户端首次写入某张尚未创建的表时，自动补齐，避免线上因漏跑迁移而整体不可用。
 // 与 migrations/*.sql 保持一致；CREATE ... IF NOT EXISTS 幂等，重复执行安全。
@@ -34,6 +40,10 @@ const schema = {
   trip_ticket_plans: {
     table: "CREATE TABLE IF NOT EXISTS trip_ticket_plans (id TEXT NOT NULL, trip_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (trip_id, id))",
     index: "CREATE INDEX IF NOT EXISTS idx_trip_ticket_plans_trip ON trip_ticket_plans(trip_id, created_at)"
+  },
+  trip_settings: {
+    table: "CREATE TABLE IF NOT EXISTS trip_settings (id TEXT NOT NULL, trip_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (trip_id, id))",
+    index: "CREATE INDEX IF NOT EXISTS idx_trip_settings_trip ON trip_settings(trip_id, created_at)"
   }
 };
 
@@ -60,11 +70,17 @@ async function readSnapshot(db, tripId, collections) {
   await Promise.all(collections.map(async (collection) => {
     try {
       const result = await db.prepare(`SELECT payload FROM ${table[collection]} WHERE trip_id = ? ORDER BY created_at, id`).bind(tripId).all();
+      if (collection === "settings") {
+        /* 单例：最多一行，回传对象（与本地快照形状一致），没有行则为 null。 */
+        snapshot.settings = result.results.length ? JSON.parse(result.results[0].payload) : null;
+        return;
+      }
       snapshot[collection] = result.results.map((row) => JSON.parse(row.payload));
     } catch (error) {
       // 单表缺失（未跑迁移）只降级这一张表，绝不能让整份快照失败；其他错误照旧抛出。
       if (!isMissingTable(error)) throw error;
-      snapshot[collection] = [];
+      if (collection === "settings") snapshot.settings = null;
+      else snapshot[collection] = [];
       missing.push(collection);
     }
   }));
@@ -76,7 +92,8 @@ async function applyChanges(db, tripId, changes, collections) {
   const statements = [];
   for (const change of changes) {
     const kind = table[change.collection];
-    const id = safeId(change.id);
+    /* settings 是单例：id 由服务端固定为 "settings"，客户端不必（也不该）自己拼。 */
+    const id = safeId(change.collection === "settings" ? SETTINGS_ID : change.id);
     if (!kind || !collections.includes(change.collection) || !id || !["upsert", "delete"].includes(change.op)) return { error: "invalid change" };
     if (change.op === "delete") {
       statements.push(db.prepare(`DELETE FROM ${kind} WHERE trip_id = ? AND id = ?`).bind(tripId, id));

@@ -38,7 +38,7 @@ const SHARED_REQUIREMENTS = {
   flights: { module: "flights", collections: ["flights"] },
   accommodations: { module: null, collections: ["accommodations"] },
   ticketPlans: { module: null, collections: ["ticketPlans"] },
-  ledger: { module: "ledger", collections: ["bills", "travelers"] },
+  ledger: { module: "ledger", collections: ["bills", "travelers", "settings"] },
   dining: { module: null, collections: ["diningRestaurants", "diningRecords"] }
 };
 
